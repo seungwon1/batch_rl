@@ -16,10 +16,11 @@ def set_seed(seed_number, env):
     return env
 
 def get_session(): # use with get_session() as sess: or sess = get_session()
+    from tensorflow.compat.v1 import InteractiveSession
     tf.reset_default_graph()
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
-    session = tf.Session(config=config)
+    session = InteractiveSession(config=config)
     return session
     
 def preprocess(images): # input : raw image of shape (N, 210, 160, 3) from gym atari env

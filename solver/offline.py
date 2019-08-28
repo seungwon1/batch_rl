@@ -54,23 +54,23 @@ class dqn_solver(object):
                     stacked_s = exp_memory.stack_frame(b_idx = None, step_count = step_count, batch = False)
                     greedy_action = self.sess.run([self.gd_idx], feed_dict = {self.state:stacked_s, self.action:np.ones((1,)), self.batch_size:1})
                     action_probs = (1/self.num_actions)*eps*np.ones((self.num_actions,))
-                    action_probs[greedy_action] += 1-eps
+                    action_probs[tuple(greedy_action)] += 1-eps
                     a_t = np.random.choice(self.num_actions, 1, p = action_probs)[0]
                     
                 next_state, r_t, done, info =  self.env.step(a_t) # step ahead
                 
                 # save (s_t, a_t, r_t, s_t+1) to memory
-                exp_memory.save_ex(s_t, a_t, r_t, next_state, info, step_count = step_count)
+                exp_memory.save_ex(s_t, a_t, r_t, next_state, done, step_count = step_count)
                 
                 # if memory collects enough data, start training (perform gradient descent with respect to chaser variable)
                 if step_count > self.train_start:
                     # load training data from memory with mini_batch size(=32)
-                    batch_s, batch_a, batch_r, batch_ns, batch_info = exp_memory.sample_ex(self.mini_batch)
+                    batch_s, batch_a, batch_r, batch_ns, batch_done = exp_memory.sample_ex(self.mini_batch)
                     
-                    # use fixed target variable to calculate target
-                    max_q_hat = self.sess.run(self.self.max_q_target, feed_dict = {self.state2:batch_ns})
+                    # use fixed target variable to calculate target max_Q
+                    max_q_hat = self.sess.run(self.max_q_target, feed_dict = {self.state_target:batch_ns})
                     target = batch_r + self.gamma*max_q_hat # target_q_val, of shape (minibatch, 1)
-                    target[batch_info == 1] = batch_r # assign reward only if next state is terminal
+                    target[batch_done == 1] = batch_r[batch_done == 1] # assign reward only if next state is terminal
                     
                     # perform gradient descent and update chaser variable
                     _, loss = self.sess.run([self.train_step, self.mean_loss], feed_dict = {self.state:batch_s, self.action:batch_a, self.batch_size:self.mini_batch, self.q_val:target})
@@ -100,5 +100,8 @@ class dqn_solver(object):
                 if episode_count % self.print_every == 0:
                     print('\nEpisode {0}: reward {1:2g}, loss {2:2g}, epsilon {3:2g}, steps {4}, total steps {5}'\
                           .format(episode_count+1 ,rew_epi,loss_epi, eps, step_count - step_start, step_count))
-
+                    
+            # increase episode_count
+            episode_count += 1
+            
         return loss_his, reward_his, reward_100, eval_his, best_param_list, final_param
