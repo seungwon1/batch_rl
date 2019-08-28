@@ -30,8 +30,7 @@ flags.DEFINE_string('loss_ft', 'huber', 'Loss function')
 
 # Solver options
 flags.DEFINE_integer('max_episodes', 1000, 'maximum number of episodes')
-flags.DEFINE_integer('max_frames', 4000000, 'maximum number of frames')
-
+flags.DEFINE_integer('max_frames', 50000000, 'maximum number of frames')
 
 # Optimizer options
 flags.DEFINE_string('opt', 'rmsprop', 'Optimization method')
@@ -66,7 +65,7 @@ def main():
     sess.run(tf.global_variables_initializer())
     
     dqnsolver = solver.dqn_solver(env, train_step, mean_loss, action_space, var_online, var_target, sess, 
-                            FLAGS.batch_size, FLAGS.train_start, FLAGS.target_reset, FLAGS.max_episodes, FLAGS.eps, 
+                            FLAGS.batch_size, FLAGS.train_start, FLAGS.target_reset, FLAGS.max_frames, FLAGS.eps, 
                             FLAGS.eps_decay, FLAGS.gamma, FLAGS.replay_size, pkg1, pkg2,
                             FLAGS.arch, FLAGS.print_every, FLAGS.eval_every, FLAGS.verbose)
     
