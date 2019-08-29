@@ -40,9 +40,10 @@ class dqn_solver(object):
         loss_his, reward_his, eval_his, reward_100, best_param_list = [], [], [], [], []
         prev_avg_reward = 0
         final_param = None
-        best_erew = 150
         eps = self.epsilon
         time1 = time.time()
+        saver = tf.train.Saver()
+
         while step_count < self.max_frames:
             rew_epi, loss_epi = 0, 0   
             done = False
@@ -61,7 +62,7 @@ class dqn_solver(object):
                     a_t = np.random.choice(self.num_actions, 1, p = action_probs)[0]
                     
                 next_state, r_t, done, info =  self.env.step(a_t) # step ahead
-                
+
                 # save (s_t, a_t, r_t, s_t+1) to memory
                 exp_memory.save_ex(s_t, a_t, r_t, next_state, done, step_count = step_count) # a_t and r_t is int and float
                 
@@ -69,12 +70,12 @@ class dqn_solver(object):
                 if step_count > self.train_start:
                     # load training data from memory with mini_batch size(=32)
                     batch_s, batch_a, batch_r, batch_ns, batch_done = exp_memory.sample_ex(self.mini_batch)
-                     
+                    
                     # use fixed target variable to calculate target max_Q
                     max_q_hat = self.sess.run(self.max_q_target, feed_dict = {self.state_target:batch_ns})
                     target = batch_r + self.gamma*max_q_hat # target_q_val, of shape (minibatch, 1)
                     target[batch_done == 1] = batch_r[batch_done == 1] # assign reward only if next state is terminal
-                    
+
                     # perform gradient descent to online variable
                     _, loss = self.sess.run([self.train_step, self.mean_loss], feed_dict = {self.state:batch_s, self.action:batch_a, self.batch_size:self.mini_batch, self.q_val:target})
                     loss_epi += loss
@@ -117,6 +118,9 @@ class dqn_solver(object):
                     plt.legend()
                     plt.savefig('./results/it_frame_loss'+str(step_count))
                     plt.clf()
+               
+                if episode_count % 50 == 0:
+                    saver.save(self.sess, "./tmp/model", global_step=step_count)
 
             # increase episode_count
             episode_count += 1

@@ -24,7 +24,7 @@ flags.DEFINE_float('final_eps', 0.1, 'final value of epsilon')
 flags.DEFINE_string('eps_decay', 'linear', 'epsilon deacy')
 flags.DEFINE_integer('train_start', 50000, 'train starts after this number of frame' )
 flags.DEFINE_integer('target_reset', 10000, 'update frequency of target network')
-flags.DEFINE_integer('replay_size', 100000, 'experience replay size')
+flags.DEFINE_integer('replay_size', 500000, 'experience replay size')
 flags.DEFINE_integer('batch_size', 32, 'batch size for training')
 flags.DEFINE_string('loss_ft', 'huber', 'Loss function')
 
@@ -36,7 +36,6 @@ flags.DEFINE_integer('max_frames', 50000000, 'maximum number of frames')
 flags.DEFINE_string('opt', 'rmsprop', 'Optimization method')
 flags.DEFINE_float('lr', 0.00025, 'learning rate')
 flags.DEFINE_bool('clip', True, 'gradient clipping')
-
 
 # Others
 flags.DEFINE_bool('verbose', True, 'print loss during trainig')

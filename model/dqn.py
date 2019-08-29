@@ -26,6 +26,7 @@ class DQN(object):
                 conv1 = tf.contrib.layers.conv2d(state, num_outputs = 32, kernel_size = 8, stride = 4)
                 conv2 = tf.contrib.layers.conv2d(conv1, num_outputs = 64, kernel_size = 4, stride = 2)
                 conv3 = tf.contrib.layers.conv2d(conv2, num_outputs = 64, kernel_size = 3, stride = 1)
+                
             conv3_flatten = tf.contrib.layers.flatten(conv3)
                 
             with tf.variable_scope('fc'):
