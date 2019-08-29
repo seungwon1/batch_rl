@@ -3,10 +3,8 @@ import tensorflow as tf
 import math
 import gym
 from utils import *
-import time
-from matplotlib import pyplot as plt
 
-class dqn_solver(object):
+class dqn_offline_solver(object):
     
     def __init__(self, env, train_step, loss, num_actions, variable, var2, sess, mini_batch, train_start, target_reset, max_frames, epsilon, epsilon_decay, gamma, memory_capa, pkg1, pkg2, arch, print_every = 100, eval_every = 50, verbose = True):
         
@@ -63,24 +61,19 @@ class dqn_solver(object):
                     
                 next_state, r_t, done, info =  self.env.step(a_t) # step ahead
 
-                # save (s_t, a_t, r_t, s_t+1) to memory
-                exp_memory.save_ex(s_t, a_t, r_t, next_state, done, step_count = step_count) # a_t and r_t is int and float
-                
-                # if memory collects enough data, start training (perform gradient descent with respect to online variable)
-                if step_count > self.train_start:
-                    # load training data from memory with mini_batch size(=32)
-                    batch_s, batch_a, batch_r, batch_ns, batch_done = exp_memory.sample_ex(self.mini_batch)
+                # load training data from memory with mini_batch size(=32)
+                batch_s, batch_a, batch_r, batch_ns, batch_done = exp_memory.sample_ex(step_count, training_type = 'offline')
                     
-                    # use fixed target variable to calculate target max_Q
-                    max_q_hat = self.sess.run(self.max_q_target, feed_dict = {self.state_target:batch_ns})
-                    target = batch_r + self.gamma*max_q_hat # target_q_val, of shape (minibatch, 1)
-                    target[batch_done == 1] = batch_r[batch_done == 1] # assign reward only if next state is terminal
+                # use fixed target variable to calculate target max_Q
+                max_q_hat = self.sess.run(self.max_q_target, feed_dict = {self.state_target:batch_ns})
+                target = batch_r + self.gamma*max_q_hat # target_q_val, of shape (minibatch, 1)
+                target[batch_done == 1] = batch_r[batch_done == 1] # assign reward only if next state is terminal
 
-                    # perform gradient descent to online variable
-                    _, loss = self.sess.run([self.train_step, self.mean_loss], feed_dict = {self.state:batch_s, self.action:batch_a, self.batch_size:self.mini_batch, self.q_val:target})
-                    loss_epi += loss
+                # perform gradient descent to online variable
+                _, loss = self.sess.run([self.train_step, self.mean_loss], feed_dict = {self.state:batch_s, self.action:batch_a, self.batch_size:self.mini_batch, self.q_val:target})
+                loss_epi += loss
 
-                 # linearly decaying epsilon for every step
+                # linearly decaying epsilon for every step
                 eps = linear_decay(step_count)
                 
                 # Reset target_variables in every interval(target_reset)

@@ -19,6 +19,7 @@ flags.DEFINE_float('gamma', 0.99, 'discount factor')
 
 # Trainig method(offline, online), options
 flags.DEFINE_string('setting', 'offline', 'Training method')
+flags.DEFINE_bool('online', True, 'Training type, offline if False')
 flags.DEFINE_float('eps', 0.99, 'epsilon start')
 flags.DEFINE_float('final_eps', 0.1, 'final value of epsilon')
 flags.DEFINE_string('eps_decay', 'linear', 'epsilon deacy')
@@ -63,7 +64,7 @@ def main():
     var_target = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope= 'target')
     sess.run(tf.global_variables_initializer())
     
-    dqnsolver = solver.dqn_solver(env, train_step, mean_loss, action_space, var_online, var_target, sess, 
+    dqnsolver = solver.dqn_online_solver(env, train_step, mean_loss, action_space, var_online, var_target, sess, 
                             FLAGS.batch_size, FLAGS.train_start, FLAGS.target_reset, FLAGS.max_frames, FLAGS.eps, 
                             FLAGS.eps_decay, FLAGS.gamma, FLAGS.replay_size, pkg1, pkg2,
                             FLAGS.arch, FLAGS.print_every, FLAGS.eval_every, FLAGS.verbose)

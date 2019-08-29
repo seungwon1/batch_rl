@@ -20,7 +20,8 @@ def get_session(): # use with get_session() as sess: or sess = get_session()
     tf.reset_default_graph()
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
-    session = InteractiveSession(config=config)
+    session = tf.Session(config=config)
+    #session = InteractiveSession(config=config)
     return session
     
 def preprocess(images): # input : raw image of shape (N, 210, 160, 3) from gym atari env
@@ -74,15 +75,19 @@ class ex_replay(object): # experience replay
             out_frame[..., 1] = self.memory_frame[(step_count-2+self.memory_size)%self.memory_size]
             out_frame[..., 2] = self.memory_frame[(step_count-1+self.memory_size)%self.memory_size]
             out_frame[..., 3] = self.memory_frame[step_count]
-            
         return out_frame
    
-    def sample_ex(self, step_count):
+    def sample_ex(self, step_count, training_type = 'online'):
         "Sample experience from replay. Output exprience with batch_size"
-        if step_count < self.memory_size:
-            b_idx = np.random.choice(step_count, self.batch_size)
-        else:
+        if training_type == 'online':
+            if step_count < self.memory_size:
+                b_idx = np.random.choice(step_count, self.batch_size)
+            else:
+                b_idx = np.random.choice(self.memory_size, self.batch_size)
+                
+        elif training_type == 'offline':
             b_idx = np.random.choice(self.memory_size, self.batch_size)
+            
         s_t, next_s_t = self.stack_frame(b_idx), self.stack_frame(b_idx+1) # each of shape (N,84,84,4), which is input of NN
         a_t, r_t, done_t = self.memory_a_r[b_idx, 0], self.memory_a_r[b_idx, 1], self.memory_a_r[b_idx, 2]
         return s_t, a_t, r_t, next_s_t, done_t
