@@ -53,7 +53,7 @@ class dqn_online_solver(object):
                 exp_memory.save_ex(s_t, None, None, None, None, step_count = step_count)
                 
             while done == False: # continue to step until an episode terminates
-                if step_count % 4 == 0: # select action in every kth frame
+                if step_count % 1 == 0: # select action in every 1th frame
                     # compute forward pass to find greedy action and select action with epsilon greedy strategy
                     stacked_s = exp_memory.stack_frame(b_idx = None, step_count = step_count, batch = False)
                     greedy_action = self.sess.run([self.gd_idx], feed_dict = {self.state:stacked_s, self.action:np.ones((1,)), self.batch_size:1})
@@ -67,7 +67,7 @@ class dqn_online_solver(object):
                 exp_memory.save_ex(s_t, a_t, r_t, next_state, done, step_count = step_count) # a_t and r_t is int and float
                 
                 # if memory collects enough data, start training (perform gradient descent with respect to online variable)
-                if step_count > self.train_start:
+                if step_count > self.train_start and step_count%4 == 0:
                     # load training data from memory with mini_batch size(=32)
                     batch_s, batch_a, batch_r, batch_ns, batch_done = exp_memory.sample_ex(step_count)
                     
@@ -80,8 +80,8 @@ class dqn_online_solver(object):
                     _, loss = self.sess.run([self.train_step, self.mean_loss], feed_dict = {self.state:batch_s, self.action:batch_a, self.batch_size:self.mini_batch, self.q_val:target})
                     loss_epi += loss
 
-                 # linearly decaying epsilon for every step
-                eps = linear_decay(step_count)
+                     # linearly decaying epsilon for every 4 step
+                    eps = linear_decay(step_count)
                 
                 # Reset target_variables in every interval(target_reset)
                 if step_count % self.target_reset == 0:
