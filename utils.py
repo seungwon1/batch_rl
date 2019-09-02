@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import cv2
 import os
 import random
+from PIL import Image
 
 def set_seed(seed_number, env):
     os.environ['PYTHONHASHSEED']=str(seed_number)
@@ -41,7 +42,8 @@ class ex_replay(object): # experience replay
     
     def __init__(self, memory_size, batch_size = 32):
         self.memory_size = memory_size
-        self.memory_frame = np.zeros((memory_size, 84, 84)) 
+        #self.memory_frame = []
+        self.memory_frame = np.zeros((memory_size, 84, 84))
         self.memory_a_r = np.zeros((memory_size, 3))
         self.batch_size = batch_size
         
@@ -51,8 +53,14 @@ class ex_replay(object): # experience replay
         Save unit frame of shape 84*84 instead of saving stacked frames
         """
         if step_count == 0:
+            #self.memory_frame.append(preprocess(s_t))
+            #if step_count > self.memory_size:
+            #    self.memory_frame[step_count%self.memory_size] = preprocess(s_t)
             self.memory_frame[step_count%self.memory_size, :, :] = preprocess(s_t)
         else:
+            #self.memory_frame.append(preprocess(next_s_t))
+            #if step_count > self.memory_size:
+            #    self.memory_frame[(step_count+1)%self.memory_size] = preprocess(next_s_t)
             self.memory_frame[(step_count+1)%self.memory_size, :, :] = preprocess(next_s_t)
             self.memory_a_r[step_count%self.memory_size, 0], self.memory_a_r[step_count%self.memory_size, 1] = a_t, r_t
             self.memory_a_r[step_count%self.memory_size, 2] = done
@@ -68,13 +76,13 @@ class ex_replay(object): # experience replay
             out_frame[..., 0] = self.memory_frame[(b_idx-3+self.memory_size)%self.memory_size]
             out_frame[..., 1] = self.memory_frame[(b_idx-2+self.memory_size)%self.memory_size]
             out_frame[..., 2] = self.memory_frame[(b_idx-1+self.memory_size)%self.memory_size]
-            out_frame[..., 3] = self.memory_frame[b_idx]
+            out_frame[..., 3] = self.memory_frame[(b_idx+self.memory_size)%self.memory_size]
         else:
             out_frame = np.zeros((1, 84, 84, 4))
             out_frame[..., 0] = self.memory_frame[(step_count-3+self.memory_size)%self.memory_size]
             out_frame[..., 1] = self.memory_frame[(step_count-2+self.memory_size)%self.memory_size]
             out_frame[..., 2] = self.memory_frame[(step_count-1+self.memory_size)%self.memory_size]
-            out_frame[..., 3] = self.memory_frame[step_count]
+            out_frame[..., 3] = self.memory_frame[(step_count+self.memory_size)%self.memory_size]
         return out_frame
    
     def sample_ex(self, step_count, training_type = 'online'):
@@ -87,7 +95,7 @@ class ex_replay(object): # experience replay
                 
         elif training_type == 'offline':
             b_idx = np.random.choice(self.memory_size, self.batch_size)
-            
+        
         s_t, next_s_t = self.stack_frame(b_idx), self.stack_frame(b_idx+1) # each of shape (N,84,84,4), which is input of NN
         a_t, r_t, done_t = self.memory_a_r[b_idx, 0], self.memory_a_r[b_idx, 1], self.memory_a_r[b_idx, 2]
         return s_t, a_t, r_t, next_s_t, done_t
