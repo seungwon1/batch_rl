@@ -5,6 +5,7 @@ import gym
 from utils import *
 import time
 from matplotlib import pyplot as plt
+from PIL import Image
 
 class dqn_online_solver(object):
     
@@ -65,6 +66,7 @@ class dqn_online_solver(object):
 
                 # save (s_t, a_t, r_t, s_t+1) to memory
                 exp_memory.save_ex(s_t, a_t, r_t, next_state, done, step_count = step_count) # a_t and r_t is int and float
+                s_t = next_state
                 
                 # if memory collects enough data, start training (perform gradient descent with respect to online variable)
                 if step_count > self.train_start and step_count%4 == 0:
@@ -121,6 +123,8 @@ class dqn_online_solver(object):
                
                 if episode_count % 50 == 0:
                     saver.save(self.sess, "./tmp/model", global_step=step_count)
+                    np.save('./results/replay_memory', exp_memory.memory_frame) 
+                    np.save('./results/replay_memory2', exp_memory.memory_a_r)                    
 
             # increase episode_count
             episode_count += 1
