@@ -59,7 +59,7 @@ class dqn_online_solver(object):
                     # compute forward pass to find greedy action and select action with epsilon greedy strategy
                     stacked_s = exp_memory.stack_frame(b_idx = None, step_count = step_count, batch = False)
                     greedy_action = self.sess.run([self.gd_idx], feed_dict = {self.state:stacked_s, self.action:np.ones((1,)), self.batch_size:1})
-                    a_t = e_greedy_execute(num_actions, eps, greedy_action)
+                    a_t = e_greedy_execute(self.num_actions, eps, greedy_action)
                     
                 next_state, r_t, done, info =  self.env.step(a_t) # step ahead
 
@@ -121,8 +121,9 @@ class dqn_online_solver(object):
                
                 if episode_count % 50 == 0:
                     saver.save(self.sess, "./tmp/model", global_step=step_count)
-                    np.save('./results/replay_memory', exp_memory.memory_frame) 
-                    np.save('./results/replay_memory2', exp_memory.memory_a_r)                    
+                    if step_count > 1000000:
+                        np.save('./results/replay_memory', exp_memory.memory_frame) 
+                        np.save('./results/replay_memory2', exp_memory.memory_a_r)                    
 
             # increase episode_count
             episode_count += 1
