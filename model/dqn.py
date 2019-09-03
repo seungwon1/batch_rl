@@ -46,23 +46,6 @@ class DQN(object):
             print('inappropriate network')
             raise
       
-    # define loss function    
-    def target_q(self, greedy_action):
-        max_q_hat = greedy_action  #which is tf.placeholder(tf.float32, [None])
-        batch_reward = tf.placeholder(tf.float32, [None])
-        batch_done_true = tf.placeholder(tf.int32, [None, 1])
-        batch_done_false = tf.placeholder(tf.int32, [None, 1])
-                
-        target_q = batch_reward + self.gamma*max_q_hat
-        
-        onehot1 = tf.reshape(tf.reduce_sum(tf.one_hot(batch_done_true, tf.shape(target_q)[0], dtype='int32'), 0), (-1,))
-        maxqhat_done = tf.multiply(target_q, tf.cast(onehot1, tf.float32))
-        onehot2 = tf.reshape(tf.reduce_sum(tf.one_hot(batch_done_false, tf.shape(target_q)[0], dtype='int32'), 0), (-1,))
-        maxqhat_not_done = tf.multiply(target_q, tf.cast(onehot2, tf.float32))
-        
-        target_q3 = maxqhat_done + maxqhat_not_done
-        return max_q_hat, batch_reward, batch_done_true, batch_done_false, target_q, target_q3
-
     def dqn_loss(self,label, pred, loss_type = 'huber'): # calculate loss
         if loss_type == 'mse':
             loss = tf.losses.mean_squared_error(label, pred)
