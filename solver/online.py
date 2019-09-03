@@ -3,13 +3,14 @@ import tensorflow as tf
 import math
 import gym
 from utils import *
+from .base import e_greedy_execute
 import time
 from matplotlib import pyplot as plt
 from PIL import Image
 
 class dqn_online_solver(object):
     
-    def __init__(self, env, train_step, loss, num_actions, variable, var2, sess, mini_batch, train_start, target_reset, max_frames, epsilon, epsilon_decay, gamma, memory_capa, pkg1, pkg2, arch, print_every = 100, eval_every = 50, verbose = True):
+    def __init__(self, env, train_step, loss, num_actions, variable, var2, sess, mini_batch, train_start, target_reset, max_frames, epsilon, epsilon_decay, gamma, memory_capa, pkg1, pkg2, pkg3, arch, print_every = 100, eval_every = 50, verbose = True):
         
         self.env = env
         self.train_step = train_step
@@ -34,6 +35,7 @@ class dqn_online_solver(object):
         self.verbose = verbose
         self.state, self.action, self.q_val, self_est_q, self.batch_size, self.gd_idx, self.gd_action  = pkg1
         self.state_target, self.max_q_target = pkg2
+        self.max_q_hat, self.batch_reward, self.batch_done_true, self.batch_done_false, self.target_q, self.target_q3 = pkg3
         
     def train(self):
         step_count, episode_count = 0, 0
@@ -58,31 +60,23 @@ class dqn_online_solver(object):
                     # compute forward pass to find greedy action and select action with epsilon greedy strategy
                     stacked_s = exp_memory.stack_frame(b_idx = None, step_count = step_count, batch = False)
                     greedy_action = self.sess.run([self.gd_idx], feed_dict = {self.state:stacked_s, self.action:np.ones((1,)), self.batch_size:1})
-                    action_probs = (1/self.num_actions)*eps*np.ones((self.num_actions,))
-                    action_probs[tuple(greedy_action)] += 1-eps
-                    a_t = np.random.choice(self.num_actions, 1, p = action_probs)[0]
-                    
+                    a_t = e_greedy_execute(self.num_actions, eps, greedy_action)
+                
                 next_state, r_t, done, info =  self.env.step(a_t) # step ahead
-
-                # save (s_t, a_t, r_t, s_t+1) to memory
-                exp_memory.save_ex(s_t, a_t, r_t, next_state, done, step_count = step_count) # a_t and r_t is int and float
+                exp_memory.save_ex(s_t, a_t, r_t, next_state, done, step_count = step_count) # save (s_t, a_t, r_t, s_t+1) to memory
                 s_t = next_state
                 
-                # if memory collects enough data, start training (perform gradient descent with respect to online variable)
+                # if memory collects enough data, start training (perform gradient descent with respect to online variable) in every kth frame
                 if step_count > self.train_start and step_count%4 == 0:
                     # load training data from memory with mini_batch size(=32)
                     batch_s, batch_a, batch_r, batch_ns, batch_done = exp_memory.sample_ex(step_count)
-                    
-                    # use fixed target variable to calculate target max_Q
-                    max_q_hat = self.sess.run(self.max_q_target, feed_dict = {self.state_target:batch_ns})
-                    target = batch_r + self.gamma*max_q_hat # target_q_val, of shape (minibatch, 1)
-                    target[batch_done == 1] = batch_r[batch_done == 1] # assign reward only if next state is terminal
+                    done_idx = [np.argwhere(batch_done == 0), np.argwhere(batch_done == 1)]
 
                     # perform gradient descent to online variable
-                    _, loss = self.sess.run([self.train_step, self.mean_loss], feed_dict = {self.state:batch_s, self.action:batch_a, self.batch_size:self.mini_batch, self.q_val:target})
+                    _, loss = self.sess.run([self.train_step, self.mean_loss], feed_dict = {self.state:batch_s,                     self.action:batch_a, self.batch_size:self.mini_batch, self.state_target:batch_ns, self.batch_reward:batch_r, self.batch_done_true:done_idx[1], self.batch_done_false:done_idx[0]})
                     loss_epi += loss
-
-                     # linearly decaying epsilon for every 4 step
+                    
+                    # linearly decaying epsilon for every 4 step
                     eps = linear_decay(step_count)
                 
                 # Reset target_variables in every interval(target_reset)

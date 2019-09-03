@@ -34,7 +34,7 @@ flags.DEFINE_integer('max_episodes', 1000, 'maximum number of episodes')
 flags.DEFINE_integer('max_frames', 50000000, 'maximum number of frames')
 
 # Optimizer options
-flags.DEFINE_string('opt', 'rmsprop', 'Optimization method')
+flags.DEFINE_string('opt', 'adam', 'Optimization method') # rmsprop
 flags.DEFINE_float('lr', 0.00025, 'learning rate')
 flags.DEFINE_bool('clip', True, 'gradient clipping')
 
@@ -57,16 +57,21 @@ def main():
     
     state_target, max_q_target = algo.model('target') # target network
     pkg2 = (state_target, max_q_target)
-    mean_loss = algo.dqn_loss(q_val, est_q, loss_type = FLAGS.loss_ft) 
+    
+    max_q_hat, batch_reward, batch_done_true, batch_done_false, target_q, target_q3 = algo.target_q(max_q_target)
+    pkg3 = max_q_hat, batch_reward, batch_done_true, batch_done_false, target_q, target_q3
+    
+    mean_loss = algo.dqn_loss(target_q3, est_q, loss_type = FLAGS.loss_ft) 
     train_step = algo.dqn_optimizer(mean_loss)
         
     var_online = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope= 'online')
     var_target = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope= 'target')
-    sess.run(tf.global_variables_initializer())
-    
+    sess.run(tf.global_variables_initializer())    
+    sess.run( [tf.assign(t, o) for t, o in zip(var_target, var_online)])
+
     dqnsolver = solver.dqn_online_solver(env, train_step, mean_loss, action_space, var_online, var_target, sess, 
                             FLAGS.batch_size, FLAGS.train_start, FLAGS.target_reset, FLAGS.max_frames, FLAGS.eps, 
-                            FLAGS.eps_decay, FLAGS.gamma, FLAGS.replay_size, pkg1, pkg2,
+                            FLAGS.eps_decay, FLAGS.gamma, FLAGS.replay_size, pkg1, pkg2, pkg3,
                             FLAGS.arch, FLAGS.print_every, FLAGS.eval_every, FLAGS.verbose)
     
     loss_his, reward_his, reward100, eval_his, best_param_list, final_var = dqnsolver.train()
