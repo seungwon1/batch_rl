@@ -3,6 +3,12 @@ import tensorflow as tf
 import gym
 from utils import *
 
+def categorical_algorithm():
+    return None
+
+def project_onto_support():
+    return None
+
 class DQN(object):
                                                                                                                         
     def __init__(self, num_actions, num_atoms = 51, lr = 0.00025, mini_batch = 32, opt = 'rmsprop', clipping = True, arch = "DQN", gamma = 0.99, seed = 6555):
@@ -21,7 +27,7 @@ class DQN(object):
         action = tf.placeholder(tf.int32, [None])
         q_val =  tf.placeholder(tf.float32, [None])
         batch_size = tf.placeholder(tf.int32, shape = None)
-              
+
         with tf.variable_scope(network):
             with tf.variable_scope('conv'):
                 conv1 = tf.contrib.layers.conv2d(state, num_outputs = 32, kernel_size = 8, stride = 4)
@@ -38,7 +44,7 @@ class DQN(object):
         greedy_action = tf.reduce_max(out, axis = 1)
         
         if network == 'online':
-            est_q = tf.reduce_sum(tf.multiply(out, tf.one_hot(action, self.num_actions, dtype='float32')), axis = 1)
+            est_q = tf.reduce_sum(tf.multiply(out, tf.one_hot(action, self.num_actions, dtype='float32')), axis = 1) # of shape (N, )
             return state, action, q_val, est_q, batch_size, greedy_idx, greedy_action
         elif network == 'target':
             return state, greedy_action
