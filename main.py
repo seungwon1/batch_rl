@@ -10,7 +10,7 @@ FLAGS = flags.FLAGS
 
 # Set configuration for the experiments
 # Game environments
-flags.DEFINE_string('game', 'Pong-v0', 'Atari environments')
+flags.DEFINE_string('game', 'PongNoFrameskip-v4', 'Atari environments') # 'Pong-v0'
 
 # Model options
 flags.DEFINE_string('arch', 'DQN', 'Nature DQN')
@@ -58,7 +58,7 @@ def main():
     state_target, max_q_target = algo.model('target') # target network
     pkg2 = (state_target, max_q_target)
     
-    mean_loss = algo.dqn_loss(q_val, est_q, loss_type = FLAGS.loss_ft) 
+    mean_loss = algo.dqn_loss(q_val, est_q, loss_type = FLAGS.loss_ft)  # logits (true): q_val (fixed target), pred: est_q
     train_step = algo.dqn_optimizer(mean_loss)
         
     var_online = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope= 'online')
