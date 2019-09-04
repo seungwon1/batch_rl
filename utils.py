@@ -43,7 +43,7 @@ class ex_replay(object): # experience replay
     def __init__(self, memory_size, batch_size = 32):
         self.memory_size = memory_size
         #self.memory_frame = []
-        self.memory_frame = np.empty((memory_size, 84, 84))
+        self.memory_frame = np.empty((memory_size, 84, 84), dtype=np.uint8)
         self.memory_a_r = np.empty((memory_size, 3))
         self.batch_size = batch_size
         

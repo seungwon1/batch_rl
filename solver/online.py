@@ -33,12 +33,12 @@ class dqn_online_solver(object):
         self.print_every = print_every
         self.eval_every =eval_every
         self.verbose = verbose
-        self.state, self.action, self.q_val, self_est_q, self.batch_size, self.gd_idx, self.gd_action  = pkg1
+        self.state, self.action, self.q_val, self_est_q, self.gd_idx, self.gd_action  = pkg1
         self.state_target, self.max_q_target = pkg2
         
     def train(self):
         step_count, episode_count = 0, 0
-        exp_memory = ex_replay(memory_size = self.memory_capa) # initialize experience replay
+        exp_memory = ex_replay(memory_size = self.memory_capa, batch_size = self.mini_batch) # initialize experience replay
         loss_his, reward_his, eval_his, reward_100, best_param_list = [], [], [], [], []
         prev_avg_reward = 0
         final_param = None
@@ -58,7 +58,7 @@ class dqn_online_solver(object):
                 if step_count % 1 == 0: # select action in every 1th frame
                     # compute forward pass to find greedy action and select action with epsilon greedy strategy
                     stacked_s = exp_memory.stack_frame(b_idx = None, step_count = step_count, batch = False)
-                    greedy_action = self.sess.run([self.gd_idx], feed_dict = {self.state:stacked_s, self.action:np.ones((1,)), self.batch_size:1})
+                    greedy_action = self.sess.run([self.gd_idx], feed_dict = {self.state:stacked_s})
                     a_t = e_greedy_execute(self.num_actions, eps, greedy_action)
                     
                 next_state, r_t, done, info =  self.env.step(a_t) # step ahead
@@ -78,7 +78,7 @@ class dqn_online_solver(object):
                     target[batch_done == 1] = batch_r[batch_done == 1] # assign reward only if next state is terminal
 
                     # perform gradient descent to online variable
-                    _, loss = self.sess.run([self.train_step, self.mean_loss], feed_dict = {self.state:batch_s, self.action:batch_a, self.batch_size:self.mini_batch, self.q_val:target})
+                    _, loss = self.sess.run([self.train_step, self.mean_loss], feed_dict = {self.state:batch_s, self.action:batch_a,  self.q_val:target})
                     loss_epi += loss
                     # linearly decaying epsilon for every 4 step
                     eps = linear_decay(step_count)

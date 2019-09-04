@@ -7,7 +7,7 @@ from utils import *
 from tensorflow.python.platform import flags
 
 FLAGS = flags.FLAGS
-
+ 
 # Set configuration for the experiments
 # Game environments
 flags.DEFINE_string('game', 'PongNoFrameskip-v4', 'Atari environments') # 'Pong-v0'
@@ -25,7 +25,7 @@ flags.DEFINE_float('final_eps', 0.1, 'final value of epsilon')
 flags.DEFINE_string('eps_decay', 'linear', 'epsilon deacy')
 flags.DEFINE_integer('train_start', 50000, 'train starts after this number of frame' )
 flags.DEFINE_integer('target_reset', 10000, 'update frequency of target network')
-flags.DEFINE_integer('replay_size', 500000, 'experience replay size')
+flags.DEFINE_integer('replay_size', 1000000, 'experience replay size')
 flags.DEFINE_integer('batch_size', 32, 'batch size for training')
 flags.DEFINE_string('loss_ft', 'huber', 'Loss function')
 
@@ -52,8 +52,8 @@ def main():
     algo = model.DQN(num_actions = action_space, num_atoms = FLAGS.num_heads, lr = FLAGS.lr, 
                      opt = FLAGS.opt, clipping = FLAGS.clip, arch = FLAGS.arch)
     
-    state, action, q_val, est_q, batch_size, greedy_idx, greedy_action = algo.model('online') # online network
-    pkg1 = (state, action, q_val, est_q, batch_size, greedy_idx, greedy_action)
+    state, action, q_val, est_q, greedy_idx, greedy_action = algo.model('online') # online network
+    pkg1 = (state, action, q_val, est_q, greedy_idx, greedy_action)
     
     state_target, max_q_target = algo.model('target') # target network
     pkg2 = (state_target, max_q_target)
