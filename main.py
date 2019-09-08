@@ -4,6 +4,7 @@ import gym
 import model
 import solver
 from utils import *
+from atari_wrappers import *
 from tensorflow.python.platform import flags
 
 FLAGS = flags.FLAGS
@@ -11,6 +12,7 @@ FLAGS = flags.FLAGS
 # Set configuration for the experiments
 # Game environments
 flags.DEFINE_string('game', 'PongNoFrameskip-v4', 'Atari environments') # 'Pong-v0'
+flags.DEFINE_integer('skip_frame', 4, 'Number of frames skipped') 
 
 # Model options
 flags.DEFINE_string('arch', 'DQN', 'Nature DQN')
@@ -30,8 +32,7 @@ flags.DEFINE_integer('batch_size', 32, 'batch size for training')
 flags.DEFINE_string('loss_ft', 'huber', 'Loss function')
 
 # Solver options
-flags.DEFINE_integer('max_episodes', 1000, 'maximum number of episodes')
-flags.DEFINE_integer('max_frames', 50000000, 'maximum number of frames')
+flags.DEFINE_integer('max_frames', 6000000, 'maximum number of frames') # 50000000
 
 # Optimizer options
 flags.DEFINE_string('opt', 'adam', 'Optimization method') # rmsprop
@@ -40,6 +41,8 @@ flags.DEFINE_bool('clip', True, 'gradient clipping')
 
 # Others
 flags.DEFINE_bool('verbose', True, 'print loss during trainig')
+flags.DEFINE_bool('reload', False, 'load previous session ')
+flags.DEFINE_bool('evaluate', False, 'evaluate trained agent ')
 flags.DEFINE_integer('print_every', 10, 'print interval')
 flags.DEFINE_integer('eval_every', 100, 'evaluation interval')
 flags.DEFINE_integer('seed', 6550, 'seed number')
@@ -58,20 +61,17 @@ def main():
     state_target, max_q_target = algo.model('target') # target network
     pkg2 = (state_target, max_q_target)
     
-    mean_loss = algo.dqn_loss(q_val, est_q, loss_type = FLAGS.loss_ft)  # logits (true): q_val (fixed target), pred: est_q
-    train_step = algo.dqn_optimizer(mean_loss)
-        
     var_online = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope= 'online')
     var_target = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope= 'target')
+    
+    mean_loss = algo.dqn_loss(q_val, est_q, loss_type = FLAGS.loss_ft)  # logits (true): q_val (fixed target), pred: est_q
+    train_step = algo.dqn_optimizer(mean_loss, var_online)
+    
     sess.run(tf.global_variables_initializer())    
     sess.run( [tf.assign(t, o) for t, o in zip(var_target, var_online)])
 
-    dqnsolver = solver.dqn_online_solver(env, train_step, mean_loss, action_space, var_online, var_target, sess, 
-                            FLAGS.batch_size, FLAGS.train_start, FLAGS.target_reset, FLAGS.max_frames, FLAGS.eps, 
-                            FLAGS.eps_decay, FLAGS.gamma, FLAGS.replay_size, pkg1, pkg2,
-                            FLAGS.arch, FLAGS.print_every, FLAGS.eval_every, FLAGS.verbose)
-    
-    loss_his, reward_his, reward100, eval_his, best_param_list, final_var = dqnsolver.train()
+    dqnsolver = solver.dqn_online_solver(env, train_step, mean_loss, action_space, var_online, var_target, sess, pkg1, pkg2, FLAGS)
+    loss_his, reward_his, mean_reward, eval_his = dqnsolver.train()
     
 if __name__ == "__main__":
     main()   

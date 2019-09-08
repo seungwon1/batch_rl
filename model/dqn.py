@@ -5,7 +5,7 @@ from utils import *
 
 class DQN(object):
                                                                                                                         
-    def __init__(self, num_actions, num_atoms = 51, lr = 0.00025, mini_batch = 32, opt = 'rmsprop', clipping = True, arch = "DQN", gamma = 0.99, seed = 6555):
+    def __init__(self, num_actions, num_atoms = 51, lr = 0.00025, mini_batch = 32, opt = 'rmsprop', clipping = True, arch = "DQN", gamma = 0.99):
 
         self.num_actions = num_actions
         self.lr = lr
@@ -47,23 +47,31 @@ class DQN(object):
             print('inappropriate network')
             raise
       
-    def dqn_loss(self,label, pred, loss_type = 'huber'): # calculate loss
+    def dqn_loss(self,label, pred, loss_type = 'huber', delta = 1.0): # calculate loss
         if loss_type == 'mse':
             loss = tf.losses.mean_squared_error(label, pred)
         elif loss_type == 'huber':
-            loss = tf.losses.huber_loss(label, pred)
+            x = label - pred
+            loss = tf.reduce_mean(tf.where(tf.abs(x) < delta, tf.square(x) * 0.5, delta * (tf.abs(x) - 0.5 * delta)))
         return loss
     
     # define optimizer
-    def dqn_optimizer(self, loss):
+    def dqn_optimizer(self, loss, variables):
         if self.opt == 'adam':
             optimizer = tf.train.AdamOptimizer(1e-4) # self.lf
         elif self.opt == 'rmsprop':
             optimizer = tf.train.RMSPropOptimizer(self.lr) #, momentum = 0.95, epsilon = 0.01) # squared gradient?
         if self.clipping:  # clipping issue
+            """
             gradients, variables = zip(*optimizer.compute_gradients(loss))
             gradients, _ = tf.clip_by_global_norm(gradients, 10.0)
             train_step = optimizer.apply_gradients(zip(gradients, variables))
+            """
+            gradients = optimizer.compute_gradients(loss, var_list=variables)
+            for i, (grad, var) in enumerate(gradients):
+                if grad is not None:
+                    gradients[i] = (tf.clip_by_norm(grad, 10), var)
+            return optimizer.apply_gradients(gradients)
         else:
             train_step = optimizer().minimize(loss)
         return train_step
