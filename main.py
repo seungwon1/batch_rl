@@ -52,21 +52,38 @@ def main():
     env = set_seed(FLAGS.seed, FLAGS.game)
     action_space = env.action_space.n
     
-    algo = model.DQN(num_actions = action_space, num_atoms = FLAGS.num_heads, lr = FLAGS.lr, 
+    if FLAGS.arch == 'DQN':
+        algo = model.DQN(num_actions = action_space, num_atoms = FLAGS.num_heads, lr = FLAGS.lr, 
                      opt = FLAGS.opt, clipping = FLAGS.clip, arch = FLAGS.arch)
+        
+        state, action, q_val, est_q, greedy_idx, greedy_action = algo.model('online') # online network
+        pkg1 = (state, action, q_val, est_q, greedy_idx, greedy_action)
     
-    state, action, q_val, est_q, greedy_idx, greedy_action = algo.model('online') # online network
-    pkg1 = (state, action, q_val, est_q, greedy_idx, greedy_action)
+        state_target, max_q_target = algo.model('target') # target network
+        pkg2 = (state_target, max_q_target)
+        
+        var_online = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope= 'online')
+        var_target = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope= 'target')
+        
+        mean_loss = algo.dqn_loss(q_val, est_q, loss_type = FLAGS.loss_ft)  # logits (true): q_val (fixed target), pred: est_q
+        train_step = algo.dqn_optimizer(mean_loss, var_online)
+
+    elif FLAGS.arch == 'C51':
+        algo = model.C51(num_actions = action_space, num_heads = FLAGS.num_heads, lr = FLAGS.lr, 
+                     opt = FLAGS.opt, clipping = FLAGS.clip, arch = FLAGS.arch)
+        
+        state, action, est_q_online, greedy_idx = algo.model('online') # online network
+        pkg1 = (state, action, est_q_online, greedy_idx)
     
-    state_target, max_q_target = algo.model('target') # target network
-    pkg2 = (state_target, max_q_target)
-    
-    var_online = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope= 'online')
-    var_target = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope= 'target')
-    
-    mean_loss = algo.dqn_loss(q_val, est_q, loss_type = FLAGS.loss_ft)  # logits (true): q_val (fixed target), pred: est_q
-    train_step = algo.dqn_optimizer(mean_loss, var_online)
-    
+        batch_ns, update_support, est_q_target = algo.model('target') # target network
+        pkg2 = (batch_ns, update_support, est_q_target)
+                
+        var_online = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope= 'online')
+        var_target = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope= 'target')
+        
+        mean_loss = algo.c51_loss(algo.categorical_algorithm(est_q_online, est_q_target, update_support), est_q_online)
+        train_step = algo.dqn_optimizer(mean_loss, var_online)
+
     sess.run(tf.global_variables_initializer())    
     sess.run( [tf.assign(t, o) for t, o in zip(var_target, var_online)])
 
