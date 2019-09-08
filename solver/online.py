@@ -3,50 +3,43 @@ import tensorflow as tf
 import math
 import gym
 from utils import *
-from .base import e_greedy_execute
+from .base import e_greedy_execute, env_step, show_process
 import time
 from matplotlib import pyplot as plt
 from PIL import Image
 
 class dqn_online_solver(object):
     
-    def __init__(self, env, train_step, loss, num_actions, variable, var2, sess, mini_batch, train_start, target_reset, max_frames, epsilon, epsilon_decay, gamma, memory_capa, pkg1, pkg2, arch, print_every = 100, eval_every = 50, verbose = True):
+    def __init__(self, env, train_step, loss, action_space, var_online, var_target, sess, pkg1, pkg2, FLAGS):
         
         self.env = env
         self.train_step = train_step
         self.mean_loss = loss
-        self.var = variable
-        self.var2 = var2
+        self.num_actions = action_space
+        self.var_online = var_online
+        self.var_target = var_target
         self.sess = sess
-        self.num_actions = num_actions
-
-        self.mini_batch = mini_batch
-        self.train_start = train_start
-        self.target_reset = target_reset
-        self.max_frames = max_frames
-        self.epsilon = epsilon
-        self.epsilon_decay = epsilon_decay
-        self.gamma = gamma
-        self.memory_capa = memory_capa
-        self.arch = arch
-        
-        self.print_every = print_every
-        self.eval_every =eval_every
-        self.verbose = verbose
         self.state, self.action, self.q_val, self_est_q, self.gd_idx, self.gd_action  = pkg1
         self.state_target, self.max_q_target = pkg2
+        self.FLAGS = FLAGS
         
     def train(self):
         step_count, episode_count = 0, 0
-        exp_memory = ex_replay(memory_size = self.memory_capa, batch_size = self.mini_batch) # initialize experience replay
-        loss_his, reward_his, eval_his, reward_100, best_param_list = [], [], [], [], []
-        prev_avg_reward = 0
-        final_param = None
-        eps = self.epsilon
+        exp_memory = ex_replay(memory_size = self.FLAGS.replay_size, batch_size = self.FLAGS.batch_size) # initialize experience replay
+        loss_his, reward_his, eval_his, mean_reward = [], [], [], []
+        global_avg_reward = 0
+        eps = self.FLAGS.eps
         time1 = time.time()
         saver = tf.train.Saver()
-
-        while step_count < self.max_frames:
+        # reload variable evaluate agent
+        if self.FLAGS.reload or self.FLAGS.evaluate:
+            exp_memory, loss_his, reward_his, step_count = reload_session(saver)
+            # evaluate agent
+            if self.FLAGS.evaluate:
+                eval_rew_his = eval_agent(self.num_games, self.env, exp_memory, self.sess, self.num_actions, self.gd_idx, state. self.FLAGS)
+                return eval_new_his, None, None, None
+            
+        while step_count < self.FLAGS.max_frames:
             rew_epi, loss_epi = 0, 0   
             done = False
             step_start = step_count
@@ -55,26 +48,25 @@ class dqn_online_solver(object):
                 exp_memory.save_ex(s_t, None, None, None, None, step_count = step_count)
                 
             while done == False: # continue to step until an episode terminates
-                if step_count % 1 == 0: # select action in every 1th frame
-                    # compute forward pass to find greedy action and select action with epsilon greedy strategy
-                    stacked_s = exp_memory.stack_frame(b_idx = None, step_count = step_count, batch = False)
-                    greedy_action = self.sess.run([self.gd_idx], feed_dict = {self.state:stacked_s})
-                    a_t = e_greedy_execute(self.num_actions, eps, greedy_action)
+                # compute forward pass to find greedy action and select action with epsilon greedy strategy
+                stacked_s = exp_memory.stack_frame(b_idx = None, step_count = step_count, batch = False)
+                greedy_action = self.sess.run([self.gd_idx], feed_dict = {self.state:stacked_s})
+                a_t = e_greedy_execute(self.num_actions, eps, greedy_action)
                     
-                next_state, r_t, done, info =  self.env.step(a_t) # step ahead
+                next_state, r_t, done, info = self.env.step(a_t) #env_step(self.env, s_t, a_t, self.FLAGS) # step ahead. skip every kth frame  
 
                 # save (s_t, a_t, r_t, s_t+1) to memory
                 exp_memory.save_ex(s_t, a_t, r_t, next_state, done, step_count = step_count) # a_t and r_t is int and float
                 s_t = next_state
                 
                 # if memory collects enough data, start training (perform gradient descent with respect to online variable)
-                if step_count > self.train_start and step_count%4 == 0:
+                if step_count > self.FLAGS.train_start and step_count%4 == 0:
                     # load training data from memory with mini_batch size(=32)
                     batch_s, batch_a, batch_r, batch_ns, batch_done = exp_memory.sample_ex(step_count)
                     
                     # use fixed target variable to calculate target max_Q
                     max_q_hat = self.sess.run(self.max_q_target, feed_dict = {self.state_target:batch_ns})
-                    target = batch_r + self.gamma*max_q_hat # target_q_val, of shape (minibatch, 1)
+                    target = batch_r + self.FLAGS.gamma*max_q_hat # target_q_val, of shape (minibatch, 1)
                     target[batch_done == 1] = batch_r[batch_done == 1] # assign reward only if next state is terminal
 
                     # perform gradient descent to online variable
@@ -82,10 +74,10 @@ class dqn_online_solver(object):
                     loss_epi += loss
                     # linearly decaying epsilon for every 4 step
                     eps = linear_decay(step_count)
-                
+                    
                 # Reset target_variables in every interval(target_reset)
-                if step_count % self.target_reset == 0:
-                    self.sess.run( [tf.assign(t, o) for t, o in zip(self.var2, self.var)])
+                if step_count % self.FLAGS.target_reset == 0:
+                    self.sess.run( [tf.assign(t, o) for t, o in zip(self.var_target, self.var_online)])
 
                 # increase step count, accumulates rewards
                 step_count += 1
@@ -94,38 +86,15 @@ class dqn_online_solver(object):
             # save loss, reward per an episode, compute average reward on previous 100 number of episodes
             loss_his.append(loss_epi)
             reward_his.append(rew_epi)
-            prev_avg_reward = np.mean(reward_his[-100:])
-            reward_100.append(prev_avg_reward)
+            global_avg_reward = np.mean(reward_his)
+            mean_reward.append(global_avg_reward)
             
-            # print progress if verbose is True
-            if self.verbose:
-                if episode_count == 0:
-                    print('\nStart training '+ str(self.arch))
-                if episode_count % self.print_every == 0:
-                    print('\nEpisode {0}: reward {1:2g}, loss {2:2g}, epsilon {3:2g}, steps {4}, total steps {5}'\
-                          .format(episode_count+1 ,rew_epi,loss_epi, eps, step_count - step_start, step_count))
-                    
-                    time2 = time.time()
-                    print('time (minutes) :', int((time2-time1)/60))
-                    plt.plot(reward_his, label = 'reward')
-                    plt.title('Iteration frame: '+ str(step_count))
-                    plt.legend()
-                    plt.savefig('./results/it_frame_reward'+str(step_count))
-                    plt.clf()
-                    
-                    plt.plot(loss_his, label = 'loss')
-                    plt.title('Iteration frame: '+ str(step_count))
-                    plt.legend()
-                    plt.savefig('./results/it_frame_loss'+str(step_count))
-                    plt.clf()
-               
-                if episode_count % 50 == 0:
-                    saver.save(self.sess, "./tmp/model", global_step=step_count)
-                    if step_count > 1000000:
-                        np.save('./results/replay_memory', exp_memory.memory_frame) 
-                        np.save('./results/replay_memory2', exp_memory.memory_a_r)                    
+            # print progress if verbose is True, save records
+            if self.FLAGS.verbose:
+                show_process(self.FLAGS, episode_count ,rew_epi, global_avg_reward, loss_epi, eps, step_count, 
+                             step_start, time1, reward_his, mean_reward, exp_memory, loss_his, self.sess, saver)
 
             # increase episode_count
             episode_count += 1
             
-        return loss_his, reward_his, reward_100, eval_his, best_param_list, final_param
+        return loss_his, reward_his, mean_reward, eval_his
