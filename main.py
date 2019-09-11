@@ -36,7 +36,7 @@ flags.DEFINE_integer('max_frames', 6000000, 'maximum number of frames') # 500000
 
 # Optimizer options
 flags.DEFINE_string('opt', 'adam', 'Optimization method') # rmsprop
-flags.DEFINE_float('lr', 0.00025, 'learning rate')
+flags.DEFINE_float('lr', 0.0001, 'learning rate')
 flags.DEFINE_bool('clip', True, 'gradient clipping')
 
 # Others
@@ -66,8 +66,8 @@ def main():
         var_target = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope= 'target')
         
         mean_loss = algo.dqn_loss(q_val, est_q, loss_type = FLAGS.loss_ft)  # logits (true): q_val (fixed target), pred: est_q
-        train_step = algo.dqn_optimizer(mean_loss, var_online)
-
+        train_step, lr = algo.dqn_optimizer(mean_loss, var_online)
+        
     elif FLAGS.arch == 'C51':
         algo = model.C51(num_actions = action_space, num_heads = FLAGS.num_heads, lr = FLAGS.lr, 
                      opt = FLAGS.opt, clipping = FLAGS.clip, arch = FLAGS.arch)
@@ -82,12 +82,19 @@ def main():
         var_target = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope= 'target')
         
         mean_loss = algo.c51_loss(algo.categorical_algorithm(est_q_online, est_q_target, update_support), est_q_online)
-        train_step = algo.dqn_optimizer(mean_loss, var_online)
+        train_step, lr = algo.dqn_optimizer(mean_loss, var_online)
 
     sess.run(tf.global_variables_initializer())    
-    sess.run( [tf.assign(t, o) for t, o in zip(var_target, var_online)])
+    update_target_fn = []
+    for var, var_t in zip(sorted(var_online,        key=lambda v: v.name),
+                           sorted(var_target, key=lambda v: v.name)):
+        update_target_fn.append(var_t.assign(var))
+    update_target_fn = tf.group(*update_target_fn)
+    sess.run(update_target_fn)
+    #sess.run([tf.assign(t, o) for t, o in zip(var_target, var_online)])
 
-    dqnsolver = solver.dqn_online_solver(env, train_step, mean_loss, action_space, var_online, var_target, sess, pkg1, pkg2, FLAGS)
+    dqnsolver = solver.dqn_online_solver(env, train_step, lr, mean_loss, action_space, var_online, var_target, 
+                                         update_target_fn, sess, pkg1, pkg2, FLAGS)
     loss_his, reward_his, mean_reward, eval_his = dqnsolver.train()
     
 if __name__ == "__main__":

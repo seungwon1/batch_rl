@@ -29,11 +29,6 @@ def e_greedy_execute(num_actions, eps, greedy_action):
 def categorical_algorithm():
     return None
 
-    
-
-
-
-
 def show_process(FLAGS, episode_count ,rew_epi, global_avg_reward, loss_epi, eps, step_count, step_start, 
                  time1, reward_his, mean_reward, exp_memory, loss_his, sess, saver):
     
@@ -60,11 +55,12 @@ def show_process(FLAGS, episode_count ,rew_epi, global_avg_reward, loss_epi, eps
         plt.savefig('./results/it_frame_loss'+str(step_count))
         plt.clf()
                
-        if episode_count % 500 == 0 or step_count == FLAGS.max_frames:
+        if episode_count % 200 == 0 or step_count == FLAGS.max_frames:
             if step_count > 1000000:
                 np.save('./results/replay_memory', exp_memory.memory_frame) 
                 np.save('./results/replay_memory2', exp_memory.memory_a_r)   
                 np.save('./results/loss_his', loss_his)
+                np.save('./results/mean_loss', mean_reward) 
                 np.save('./results/reward_his', reward_his)
                 saver.save(sess, "./tmp/model", global_step=step_count)
                 if step_count == FLAGS.max_frames-1:

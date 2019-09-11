@@ -10,14 +10,16 @@ from PIL import Image
 
 class dqn_online_solver(object):
     
-    def __init__(self, env, train_step, loss, action_space, var_online, var_target, sess, pkg1, pkg2, FLAGS):
+    def __init__(self, env, train_step, lr, loss, action_space, var_online, var_target, update_target_fn, sess, pkg1, pkg2, FLAGS):
         
         self.env = env
         self.train_step = train_step
+        self.lr = lr
         self.mean_loss = loss
         self.num_actions = action_space
         self.var_online = var_online
         self.var_target = var_target
+        self.update = update_target_fn
         self.sess = sess
         self.state, self.action, self.q_val, self_est_q, self.gd_idx, self.gd_action  = pkg1
         self.state_target, self.max_q_target = pkg2
@@ -29,6 +31,7 @@ class dqn_online_solver(object):
         loss_his, reward_his, eval_his, mean_reward = [], [], [], []
         global_avg_reward = 0
         eps = self.FLAGS.eps
+        learning_rate = self.FLAGS.lr
         time1 = time.time()
         saver = tf.train.Saver()
         # reload variable evaluate agent
@@ -70,14 +73,18 @@ class dqn_online_solver(object):
                     target[batch_done == 1] = batch_r[batch_done == 1] # assign reward only if next state is terminal
 
                     # perform gradient descent to online variable
-                    _, loss = self.sess.run([self.train_step, self.mean_loss], feed_dict = {self.state:batch_s, self.action:batch_a,  self.q_val:target})
+                    _, loss = self.sess.run([self.train_step, self.mean_loss], feed_dict = {self.state:batch_s, self.action:batch_a,  self.q_val:target, self.lr:learning_rate})
                     loss_epi += loss
-                    # linearly decaying epsilon for every 4 step
-                    eps = linear_decay(step_count)
+                    # linearly decaying epsilon, learning rate for every 4 step
+                    eps = linear_decay(step_count, start =1, end = 0.1, frame = 1000000)
+                    if step_count >= self.FLAGS.max_frames/5 + 1:
+                        learning_rate = linear_decay(step_count - self.FLAGS.max_frames/5 + 1, start = 1e-4, 
+                                                     end = 5e-5, frame = 0.4*self.FLAGS.max_frames)
                     
                 # Reset target_variables in every interval(target_reset)
                 if step_count % self.FLAGS.target_reset == 0:
-                    self.sess.run( [tf.assign(t, o) for t, o in zip(self.var_target, self.var_online)])
+                    self.sess.run(self.update)
+                    #self.sess.run( [tf.assign(t, o) for t, o in zip(self.var_target, self.var_online)])
 
                 # increase step count, accumulates rewards
                 step_count += 1
@@ -86,7 +93,7 @@ class dqn_online_solver(object):
             # save loss, reward per an episode, compute average reward on previous 100 number of episodes
             loss_his.append(loss_epi)
             reward_his.append(rew_epi)
-            global_avg_reward = np.mean(reward_his)
+            global_avg_reward = np.mean(reward_his[-100:])
             mean_reward.append(global_avg_reward)
             
             # print progress if verbose is True, save records

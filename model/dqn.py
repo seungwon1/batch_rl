@@ -57,21 +57,17 @@ class DQN(object):
     
     # define optimizer
     def dqn_optimizer(self, loss, variables):
+        lr = tf.placeholder(tf.float32, shape=[])
         if self.opt == 'adam':
-            optimizer = tf.train.AdamOptimizer(1e-4) # self.lf
+            optimizer = tf.train.AdamOptimizer(learning_rate= lr, epsilon=1e-4) # self.lf
         elif self.opt == 'rmsprop':
             optimizer = tf.train.RMSPropOptimizer(self.lr) #, momentum = 0.95, epsilon = 0.01) # squared gradient?
         if self.clipping:  # clipping issue
-            """
-            gradients, variables = zip(*optimizer.compute_gradients(loss))
-            gradients, _ = tf.clip_by_global_norm(gradients, 10.0)
-            train_step = optimizer.apply_gradients(zip(gradients, variables))
-            """
             gradients = optimizer.compute_gradients(loss, var_list=variables)
             for i, (grad, var) in enumerate(gradients):
                 if grad is not None:
                     gradients[i] = (tf.clip_by_norm(grad, 10), var)
-            return optimizer.apply_gradients(gradients)
+            return optimizer.apply_gradients(gradients), lr
         else:
             train_step = optimizer().minimize(loss)
-        return train_step
+        return train_step, lr
