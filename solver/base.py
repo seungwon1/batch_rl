@@ -25,12 +25,8 @@ def e_greedy_execute(num_actions, eps, greedy_action):
     a_t = np.random.choice(num_actions, 1, p = action_probs)[0]
     return a_t
 
- 
-def categorical_algorithm():
-    return None
-
 def show_process(FLAGS, episode_count ,rew_epi, global_avg_reward, best_reward, loss_epi, eps, learning_rate, step_count, step_start, 
-                 time1, reward_his, mean_reward, exp_memory, loss_his, sess, saver):
+                 time1, reward_his, step_his, mean_reward, exp_memory, loss_his, sess, saver):
     
     if episode_count == 0:
         print('\nStart training '+ str(FLAGS.arch))
@@ -46,14 +42,21 @@ def show_process(FLAGS, episode_count ,rew_epi, global_avg_reward, best_reward, 
         plt.ylim(-30, 25)
         plt.title('Iteration frame: '+ str(step_count))
         plt.legend()
-        plt.savefig('./results/it_frame_reward'+str(step_count))
+        plt.savefig('./results/it_frame_reward')
         plt.clf()
-                    
+
+        plt.plot(step_his, mean_reward, label = 'avg reward')
+        plt.ylim(-30, 25)
+        plt.legend()
+        plt.savefig('./results/it_frame_rew_per_step')
+        plt.clf()
+                            
         plt.plot(loss_his, label = 'loss')
         plt.title('Iteration frame: '+ str(step_count))
         plt.legend()
-        plt.savefig('./results/it_frame_loss'+str(step_count))
+        plt.savefig('./results/it_frame_loss')
         plt.clf()
+        
                
         if episode_count % 200 == 0 or step_count == FLAGS.max_frames:
             if step_count > 1000000:
