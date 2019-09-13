@@ -69,14 +69,14 @@ class DQN(object):
         elif self.opt == 'rmsprop':
             # decay: squred gradient momentum, momentum: gardient momentum
             optimizer = tf.train.RMSPropOptimizer(self.lr, epsilon = 0.01, decay = 0.95, momentum = 0.95) 
-            
         if self.clipping: # for fast convergence
             gradients = optimizer.compute_gradients(loss, var_list=variables)
             for i, (grad, var) in enumerate(gradients):
                 if grad is not None:
                     gradients[i] = (tf.clip_by_norm(grad, 10), var)
             return optimizer.apply_gradients(gradients), lr
+        
         else: # setting in nature dqn
             clip_error = tf.clip_by_value(loss, -1, 1)
-            train_step = optimizer().minimize(clip_error)
-        return train_step, lr
+            train_step = optimizer.minimize(clip_error)
+            return train_step, lr

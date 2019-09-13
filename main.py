@@ -14,7 +14,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('game', 'PongNoFrameskip-v4', 'Atari environments') # 'Pong-v0'
 flags.DEFINE_integer('skip_frame', 4, 'Number of frames skipped') 
 flags.DEFINE_integer('update_freq', 4, 'Number of frames between each SGD') 
-flags.DEFINE_integer('no_op', 30, 'Number of random actions executed before the agent starts an episode) 
+flags.DEFINE_integer('no_op', 30, 'Number of random actions executed before the agent starts an episode') 
 
 # Model options
 flags.DEFINE_string('arch', 'DQN', 'Nature DQN')
@@ -48,8 +48,7 @@ flags.DEFINE_bool('evaluate', False, 'evaluate trained agent ')
 flags.DEFINE_integer('print_every', 10, 'print interval')
 flags.DEFINE_integer('eval_every', 100, 'evaluation interval')
 flags.DEFINE_integer('seed', 6550, 'seed number')
-
-flags.DEFINE_bool('fast_test', True, 'test mode for faster convergence')
+flags.DEFINE_bool('fast_test', True, 'test mode for faster convergence') # set False and FLAGS.clip as False to make Nature DQN ENV
 
 def main():
     sess = get_session()
@@ -73,9 +72,7 @@ def main():
         train_step, lr = algo.dqn_optimizer(mean_loss, var_online)
         
     elif FLAGS.arch == 'C51':
-        algo = model.C51(num_actions = action_space, num_heads = FLAGS.num_heads, lr = FLAGS.lr, 
-                     opt = FLAGS.opt, clipping = FLAGS.clip, arch = FLAGS.arch)
-        
+        algo = model.C51(num_actions = action_space) #, num_heads = FLAGS.num_heads, lr = FLAGS.lr, opt = FLAGS.opt, clipping = FLAGS.clip, arch = FLAGS.arch)
         state, action, est_q_online, greedy_idx, raw_est_q = algo.model('online') # online network
         pkg1 = (state, action, est_q_online, greedy_idx, raw_est_q)
     
@@ -84,8 +81,9 @@ def main():
                 
         var_online = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope= 'online')
         var_target = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope= 'target')
-        
-        mean_loss = algo.c51_loss(algo.categorical_algorithm(est_q_online, est_q_target, update_support), raw_est_q)
+
+        project_prob = algo.categorical_algorithm(q_online=est_q_online, q_target=est_q_target,upt_support=update_support)
+        mean_loss = algo.c51_loss(project_prob, raw_est_q)
         train_step, lr = algo.dqn_optimizer(mean_loss, var_online)
 
     sess.run(tf.global_variables_initializer())    
