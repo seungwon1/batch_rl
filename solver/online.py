@@ -10,7 +10,7 @@ from PIL import Image
 
 class dqn_online_solver(object):
     
-    def __init__(self, env, train_step, lr, loss, action_space, var_online, var_target, update_target_fn, sess, pkg1, pkg2, FLAGS):
+    def __init__(self, env, train_step, lr, loss, action_space, var_online, var_target, sess, pkg1, pkg2, FLAGS):
         
         self.env = env
         self.train_step = train_step
@@ -19,10 +19,9 @@ class dqn_online_solver(object):
         self.num_actions = action_space
         self.var_online = var_online
         self.var_target = var_target
-        self.update = update_target_fn
         self.sess = sess
-        self.state, self.action, self.q_val, self_est_q, self.gd_idx, self.gd_action  = pkg1
-        self.state_target, self.max_q_target = pkg2
+        self.state, self.action, self_est_q, self.gd_idx, self.gd_action  = pkg1
+        self.batch_state, self.batch_reward, self.batch_done, self.max_q_target = pkg2
         self.FLAGS = FLAGS
         
     def train(self):
@@ -55,7 +54,7 @@ class dqn_online_solver(object):
                 stacked_s = exp_memory.stack_frame(b_idx = None, step_count = step_count, batch = False)
                 greedy_action = self.sess.run([self.gd_idx], feed_dict = {self.state:stacked_s})
                 a_t = e_greedy_execute(self.num_actions, eps, greedy_action)
-                    
+                
                 next_state, r_t, done, info = self.env.step(a_t) #env_step(self.env, s_t, a_t, self.FLAGS) # step ahead. skip every kth frame  
 
                 # save (s_t, a_t, r_t, s_t+1) to memory
@@ -67,24 +66,22 @@ class dqn_online_solver(object):
                     # load training data from memory with mini_batch size(=32)
                     batch_s, batch_a, batch_r, batch_ns, batch_done = exp_memory.sample_ex(step_count)
                     
-                    # use fixed target variable to calculate target max_Q
-                    max_q_hat = self.sess.run(self.max_q_target, feed_dict = {self.state_target:batch_ns})
-                    target = batch_r + self.FLAGS.gamma*max_q_hat # target_q_val, of shape (minibatch, 1)
-                    target[batch_done == 1] = batch_r[batch_done == 1] # assign reward only if next state is terminal
-
-                    # perform gradient descent to online variable
-                    _, loss = self.sess.run([self.train_step, self.mean_loss], feed_dict = {self.state:batch_s, self.action:batch_a,  self.q_val:target, self.lr:learning_rate})
+                   # perform gradient descent to online variable
+                    _, loss = self.sess.run([self.train_step, self.mean_loss], feed_dict = {self.state:batch_s, self.action:batch_a,
+                                                                                            self.lr:learning_rate, self.batch_state:batch_ns,
+                                                                                            self.batch_reward:batch_r,self.batch_done:batch_done})
                     loss_epi += loss
                     # linearly decaying epsilon, learning rate for every 4 step
                     eps = linear_decay(step_count, start =1, end = 0.1, frame = 1000000)
+                    if step_count > 1e+6:
+                        eps = linear_decay(step_count - 1e+6, start = 0.1, end = 0.01, frame = self.FLAGS.max_frames/2 - 1e+6)
                     if step_count >= self.FLAGS.max_frames/5 + 1:
                         learning_rate = linear_decay(step_count - self.FLAGS.max_frames/5 + 1, start = 1e-4, 
                                                      end = 5e-5, frame = 0.4*self.FLAGS.max_frames)
                     
                 # Reset target_variables in every interval(target_reset)
                 if step_count % self.FLAGS.target_reset == 0:
-                    self.sess.run(self.update)
-                    #self.sess.run( [tf.assign(t, o) for t, o in zip(self.var_target, self.var_online)])
+                    self.sess.run( [tf.assign(t, o) for t, o in zip(self.var_target, self.var_online)])
 
                 # increase step count, accumulates rewards
                 step_count += 1
@@ -95,10 +92,11 @@ class dqn_online_solver(object):
             reward_his.append(rew_epi)
             global_avg_reward = np.mean(reward_his[-100:])
             mean_reward.append(global_avg_reward)
+            best_reward = np.max(mean_reward)
             
             # print progress if verbose is True, save records
             if self.FLAGS.verbose:
-                show_process(self.FLAGS, episode_count ,rew_epi, global_avg_reward, loss_epi, eps, step_count, 
+                show_process(self.FLAGS, episode_count ,rew_epi, global_avg_reward, best_reward, loss_epi, eps, learning_rate, step_count, 
                              step_start, time1, reward_his, mean_reward, exp_memory, loss_his, self.sess, saver)
 
             # increase episode_count

@@ -19,9 +19,14 @@ class DQN(object):
     def model(self, network):
         state = tf.placeholder(tf.uint8, [None, 84, 84, 4])
         action = tf.placeholder(tf.int32, [None])
-        q_val =  tf.placeholder(tf.float32, [None])
+        batch_state = tf.placeholder(tf.uint8, [None, 84, 84, 4])
+        batch_reward = tf.placeholder(tf.float32, [None])
+        batch_done = tf.placeholder(tf.float32, [None])
         
-        state_float = tf.cast(state,  tf.float32)/ 255.0
+        if network == 'online':
+            state_float = tf.cast(state,  tf.float32)/ 255.0
+        elif network == 'target':
+            state_float = tf.cast(batch_state,  tf.float32)/ 255.0
         
         with tf.variable_scope(network):
             with tf.variable_scope('conv'):
@@ -40,9 +45,10 @@ class DQN(object):
         
         if network == 'online':
             est_q = tf.reduce_sum(tf.multiply(out, tf.one_hot(action, self.num_actions, dtype='float32')), axis = 1)
-            return state, action, q_val, est_q, greedy_idx, greedy_action
+            return state, action, est_q, greedy_idx, greedy_action
         elif network == 'target':
-            return state, greedy_action
+            target = batch_reward + self.gamma*(1-batch_done)* greedy_action
+            return batch_state, batch_reward, batch_done, target
         else:
             print('inappropriate network')
             raise
