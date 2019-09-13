@@ -29,15 +29,15 @@ def e_greedy_execute(num_actions, eps, greedy_action):
 def categorical_algorithm():
     return None
 
-def show_process(FLAGS, episode_count ,rew_epi, global_avg_reward, loss_epi, eps, step_count, step_start, 
+def show_process(FLAGS, episode_count ,rew_epi, global_avg_reward, best_reward, loss_epi, eps, learning_rate, step_count, step_start, 
                  time1, reward_his, mean_reward, exp_memory, loss_his, sess, saver):
     
     if episode_count == 0:
         print('\nStart training '+ str(FLAGS.arch))
         
     if episode_count % FLAGS.print_every == 0:
-        print('\nEpisode {0}: reward {1:2g}, avg_reward {2:2g} loss {3:2g}, epsilon {4:2g}, steps {5}, total steps {6}'\
-              .format(episode_count+1 ,rew_epi, global_avg_reward, loss_epi, eps, step_count - step_start, step_count))
+        print('\nEpisode {0}: rew {1:2g}, avg_rew {2:2g} best_rew {3:2g}, loss {4:2g}, eps {5:2g}, lr {6:2g}, steps {7}, total steps {8}'\
+              .format(episode_count+1 ,rew_epi, global_avg_reward, best_reward, loss_epi, eps, learning_rate,  step_count - step_start, step_count))
         
         time2 = time.time()
         print('time (minutes) :', int((time2-time1)/60))

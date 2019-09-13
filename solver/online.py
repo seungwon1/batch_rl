@@ -20,15 +20,14 @@ class dqn_online_solver(object):
         self.var_online = var_online
         self.var_target = var_target
         self.sess = sess
-        self.state, self.action, self_est_q, self.gd_idx, self.gd_action  = pkg1
-        self.batch_state, self.batch_reward, self.batch_done, self.max_q_target = pkg2
+        self.state, self.action, self_est_q, self.gd_idx, _  = pkg1
+        self.batch_state, self.batch_reward, self.batch_done, _, _ = pkg2
         self.FLAGS = FLAGS
         
     def train(self):
         step_count, episode_count = 0, 0
         exp_memory = ex_replay(memory_size = self.FLAGS.replay_size, batch_size = self.FLAGS.batch_size) # initialize experience replay
-        loss_his, reward_his, eval_his, mean_reward = [], [], [], []
-        global_avg_reward = 0
+        loss_his, reward_his, eval_his, mean_reward, global_avg_reward = [], [], [], [], 0
         eps = self.FLAGS.eps
         learning_rate = self.FLAGS.lr
         time1 = time.time()
@@ -62,7 +61,7 @@ class dqn_online_solver(object):
                 s_t = next_state
                 
                 # if memory collects enough data, start training (perform gradient descent with respect to online variable)
-                if step_count > self.FLAGS.train_start and step_count%4 == 0:
+                if step_count > self.FLAGS.train_start and step_count%self.FLAGS.update_freq == 0:
                     # load training data from memory with mini_batch size(=32)
                     batch_s, batch_a, batch_r, batch_ns, batch_done = exp_memory.sample_ex(step_count)
                     
@@ -71,13 +70,15 @@ class dqn_online_solver(object):
                                                                                             self.lr:learning_rate, self.batch_state:batch_ns,
                                                                                             self.batch_reward:batch_r,self.batch_done:batch_done})
                     loss_epi += loss
-                    # linearly decaying epsilon, learning rate for every 4 step
+                    
+                    # linearly decaying epsilon, (learning rate) for every 4th step
                     eps = linear_decay(step_count, start =1, end = 0.1, frame = 1000000)
-                    if step_count > 1e+6:
-                        eps = linear_decay(step_count - 1e+6, start = 0.1, end = 0.01, frame = self.FLAGS.max_frames/2 - 1e+6)
-                    if step_count >= self.FLAGS.max_frames/5 + 1:
-                        learning_rate = linear_decay(step_count - self.FLAGS.max_frames/5 + 1, start = 1e-4, 
-                                                     end = 5e-5, frame = 0.4*self.FLAGS.max_frames)
+                    if self.FLAGS.fast_test:
+                        if step_count > 1e+6:
+                            eps = linear_decay(step_count - 1e+6, start = 0.1, end = 0.01, frame = self.FLAGS.max_frames/2 - 1e+6)
+                        if step_count >= self.FLAGS.max_frames/5 + 1:
+                            learning_rate = linear_decay(step_count - self.FLAGS.max_frames/5 + 1, start = 1e-4,
+                                                         end = 5e-5, frame = 0.4*self.FLAGS.max_frames)
                     
                 # Reset target_variables in every interval(target_reset)
                 if step_count % self.FLAGS.target_reset == 0:
