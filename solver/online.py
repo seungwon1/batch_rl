@@ -27,7 +27,7 @@ class dqn_online_solver(object):
     def train(self):
         step_count, episode_count = 0, 0
         exp_memory = ex_replay(memory_size = self.FLAGS.replay_size, batch_size = self.FLAGS.batch_size) # initialize experience replay
-        loss_his, reward_his, eval_his, mean_reward, global_avg_reward = [], [], [], [], 0
+        loss_his, reward_his, eval_his, mean_reward, step_his, global_avg_reward = [], [], [], [], [], 0
         eps = self.FLAGS.eps
         learning_rate = self.FLAGS.lr
         time1 = time.time()
@@ -91,6 +91,7 @@ class dqn_online_solver(object):
             # save loss, reward per an episode, compute average reward on previous 100 number of episodes
             loss_his.append(loss_epi)
             reward_his.append(rew_epi)
+            step_his.append(step_count)
             global_avg_reward = np.mean(reward_his[-100:])
             mean_reward.append(global_avg_reward)
             best_reward = np.max(mean_reward)
@@ -98,7 +99,7 @@ class dqn_online_solver(object):
             # print progress if verbose is True, save records
             if self.FLAGS.verbose:
                 show_process(self.FLAGS, episode_count ,rew_epi, global_avg_reward, best_reward, loss_epi, eps, learning_rate, step_count, 
-                             step_start, time1, reward_his, mean_reward, exp_memory, loss_his, self.sess, saver)
+                             step_start, time1, reward_his, step_his, mean_reward, exp_memory, loss_his, self.sess, saver)
 
             # increase episode_count
             episode_count += 1
