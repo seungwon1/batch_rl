@@ -24,7 +24,7 @@ flags.DEFINE_float('gamma', 0.99, 'discount factor')
 # Trainig method(offline, online), options
 flags.DEFINE_string('setting', 'offline', 'Training method')
 flags.DEFINE_bool('online', True, 'Training type, offline if False')
-flags.DEFINE_float('eps', 0.99, 'epsilon start')
+flags.DEFINE_float('eps', 1, 'epsilon start')
 flags.DEFINE_float('final_eps', 0.1, 'final value of epsilon')
 flags.DEFINE_string('eps_decay', 'linear', 'epsilon deacy')
 flags.DEFINE_integer('train_start', 50000, 'train starts after this number of frame' )
@@ -37,7 +37,7 @@ flags.DEFINE_string('loss_ft', 'huber', 'Loss function')
 flags.DEFINE_integer('max_frames', 6000000, 'maximum number of frames') # 50000000
 
 # Optimizer options
-flags.DEFINE_string('opt', 'adam', 'Optimization method') # rmsprop
+flags.DEFINE_string('opt', 'rmsprop', 'Optimization method') # adam
 flags.DEFINE_float('lr', 0.0001, 'learning rate')
 flags.DEFINE_bool('clip', True, 'gradient clipping')
 
