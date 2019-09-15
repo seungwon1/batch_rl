@@ -24,7 +24,7 @@ flags.DEFINE_float('gamma', 0.99, 'discount factor')
 # Trainig method(offline, online), options
 flags.DEFINE_string('setting', 'offline', 'Training method')
 flags.DEFINE_bool('online', True, 'Training type, offline if False')
-flags.DEFINE_float('eps', 1, 'epsilon start')
+flags.DEFINE_float('eps', 0.99, 'epsilon start')
 flags.DEFINE_float('final_eps', 0.1, 'final value of epsilon')
 flags.DEFINE_string('eps_decay', 'linear', 'epsilon deacy')
 flags.DEFINE_integer('train_start', 50000, 'train starts after this number of frame' )
@@ -37,7 +37,7 @@ flags.DEFINE_string('loss_ft', 'huber', 'Loss function')
 flags.DEFINE_integer('max_frames', 6000000, 'maximum number of frames') # 50000000
 
 # Optimizer options
-flags.DEFINE_string('opt', 'rmsprop', 'Optimization method') # adam
+flags.DEFINE_string('opt', 'adam', 'Optimization method') # rmsprop
 flags.DEFINE_float('lr', 0.0001, 'learning rate')
 flags.DEFINE_bool('clip', True, 'gradient clipping')
 
@@ -60,10 +60,10 @@ def main():
                      opt = FLAGS.opt, clipping = FLAGS.clip, arch = FLAGS.arch)
         
         state, action, est_q, greedy_idx, greedy_action = algo.model('online') # online network
-        pkg1 = (state, action, est_q, greedy_idx, greedy_action)
+        pkg1 = (state, action, greedy_idx) # greedy_action
     
         batch_state, batch_reward, batch_done, max_q_target = algo.model('target') # target network
-        pkg2 = (batch_state, batch_reward, batch_done, max_q_target, None)
+        pkg2 = (batch_state, batch_reward, batch_done) # , None , max_q_target
         
         var_online = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope= 'online')
         var_target = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope= 'target')
@@ -72,25 +72,69 @@ def main():
         train_step, lr = algo.dqn_optimizer(mean_loss, var_online)
         
     elif FLAGS.arch == 'C51':
+        
         algo = model.C51(num_actions = action_space) #, num_heads = FLAGS.num_heads, lr = FLAGS.lr, opt = FLAGS.opt, clipping = FLAGS.clip, arch = FLAGS.arch)
         state, action, est_q_online, greedy_idx, raw_est_q = algo.model('online') # online network
-        pkg1 = (state, action, est_q_online, greedy_idx, raw_est_q)
+        pkg1 = (state, action, greedy_idx) # est_q_online,  , raw_est_q
     
         batch_ns, batch_rew, batch_done, update_support, est_q_target = algo.model('target') # target network
-        pkg2 = (batch_ns, batch_rew, batch_done, update_support, est_q_target)
+        pkg2 = (batch_ns, batch_rew, batch_done) # update_support,  , est_q_target
                 
         var_online = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope= 'online')
         var_target = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope= 'target')
 
-        project_prob = algo.categorical_algorithm(q_online=est_q_online, q_target=est_q_target,upt_support=update_support)
+        project_prob = algo.categorical_algorithm(q_online=est_q_online, q_target=est_q_target, upt_support=update_support)
         mean_loss = algo.c51_loss(project_prob, raw_est_q)
         train_step, lr = algo.dqn_optimizer(mean_loss, var_online)
+        
+    elif FLAGS.arch == 'QR_DQN':
+        algo = model.QR_DQN(num_actions = action_space) 
+        state, action, est_q_online, greedy_idx, _ = algo.model('online') # online network
+        pkg1 = (state, action, greedy_idx) # est_q_online, 
+    
+        batch_ns, batch_rew, batch_done, est_q_target = algo.model('target') # target network
+        pkg2 = (batch_ns, batch_rew, batch_done) # , est_q_target
+                
+        var_online = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope= 'online')
+        var_target = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope= 'target')
 
+        mean_loss = algo.loss_fn(est_q_target, est_q_online)
+        train_step, lr = algo.dqn_optimizer(mean_loss, var_online)
+    
+    elif FLAGS.arch == 'ENS_DQN':
+        algo = model.ENS_DQN(num_actions = action_space) 
+        state, action, est_q_online, greedy_idx, _ = algo.model('online') # online network
+        pkg1 = (state, action, greedy_idx) # est_q_online
+    
+        batch_ns, batch_rew, batch_done, est_q_target = algo.model('target') # target network
+        pkg2 = (batch_ns, batch_rew, batch_done) # est_q_target
+                
+        var_online = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope= 'online')
+        var_target = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope= 'target')
+
+        mean_loss = algo.loss_fn(est_q_target, est_q_online)
+        train_step, lr = algo.dqn_optimizer(mean_loss, var_online)
+
+    elif FLAGS.arch == 'REM_DQN':
+        algo = model.REM_DQN(num_actions = action_space) 
+        state, action, est_q, greedy_idx, random_coeff1 = algo.model('online') # online network
+        pkg1 = (state, action, greedy_idx, random_coeff1) # est_q_online
+    
+        batch_ns, batch_rew, batch_done, est_q_target, random_coeff2 = algo.model('target') # target network
+        pkg2 = (batch_ns, batch_rew, batch_done, random_coeff2) # est_q_target
+        
+        var_online = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope= 'online')
+        var_target = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope= 'target')
+
+        mean_loss = algo.loss_fn(est_q_target, est_q_online)
+        train_step, lr = algo.dqn_optimizer(mean_loss, var_online)        
+        
     sess.run(tf.global_variables_initializer())    
     sess.run([tf.assign(t, o) for t, o in zip(var_target, var_online)])
     
     dqnsolver = solver.dqn_online_solver(env, train_step, lr, mean_loss, action_space, var_online, var_target, 
                                          sess, pkg1, pkg2, FLAGS)
+    
     loss_his, reward_his, mean_reward, eval_his = dqnsolver.train()
     
 if __name__ == "__main__":
