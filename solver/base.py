@@ -25,6 +25,11 @@ def e_greedy_execute(num_actions, eps, greedy_action):
     a_t = np.random.choice(num_actions, 1, p = action_probs)[0]
     return a_t
 
+def make_coeff(num_heads):
+    arr = np.random.uniform(low=0.0, high=1.0, size=num_heads)
+    arr /= np.sum(arr)
+    return arr
+
 def show_process(FLAGS, episode_count ,rew_epi, global_avg_reward, best_reward, loss_epi, eps, learning_rate, step_count, step_start, 
                  time1, reward_his, step_his, mean_reward, exp_memory, loss_his, sess, saver):
     
@@ -56,15 +61,14 @@ def show_process(FLAGS, episode_count ,rew_epi, global_avg_reward, best_reward, 
         plt.legend()
         plt.savefig('./results/it_frame_loss')
         plt.clf()
-        
                
         if episode_count % 200 == 0 or step_count == FLAGS.max_frames:
             if step_count > 1000000:
                 np.save('./results/replay_memory', exp_memory.memory_frame) 
                 np.save('./results/replay_memory2', exp_memory.memory_a_r)   
                 np.save('./results/loss_his', loss_his)
-                np.save('./results/step_his', step_his) 
                 np.save('./results/mean_loss', mean_reward) 
+                np.save('./results/step_his', step_his) 
                 np.save('./results/reward_his', reward_his)
                 saver.save(sess, "./tmp/model", global_step=step_count)
                 if step_count == FLAGS.max_frames-1:
@@ -102,15 +106,12 @@ def eval_agent(num_games, env, exp_memory, sess, num_actions, greedy_action, gd_
     print('Std reward', np.std(reward_his))
     return reward_his
 
-def reload_session(sess, saver, exp_memory):
+def reload_session(saver, exp_memory):
     saver.restore(sess, "./tmp/model.ckpt")
     exp_memory.memory_frame = np.load('./results/replay_memory')       
     exp_memory.memory_a_r = np.load('./results/replay_memory2')
     loss_his = np.load('./results/loss_his')
     reward_his = np.load('./results/reward_his')
-    mean_reward = np.load('./results/mean_loss')
-    step_his = np.load('./results/step_his')
-    step_count = step_his[-1]
-    episode_count = len(loss_his)
-    return exp_memory, loss_his, reward_his, step_count, mean_reward, step_count, episode_count, sess
+    step_count = len(loss_his)-1
+    return exp_memory, loss_his, reward_his, step_count
  

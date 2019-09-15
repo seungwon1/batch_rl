@@ -20,9 +20,14 @@ class dqn_online_solver(object):
         self.var_online = var_online
         self.var_target = var_target
         self.sess = sess
-        self.state, self.action, self_est_q, self.gd_idx, _  = pkg1
-        self.batch_state, self.batch_reward, self.batch_done, _, _ = pkg2
         self.FLAGS = FLAGS
+        
+        if FLAGS.arch == 'REM_DQN':
+            self.state, self.action, self.gd_idx, self.rco1 = pkg1 
+            self.batch_state, self.batch_reward, self.batch_done, self.rco2 = pkg2
+        else:
+            self.state, self.action, self.gd_idx = pkg1 
+            self.batch_state, self.batch_reward, self.batch_done = pkg2            
         
     def train(self):
         step_count, episode_count = 0, 0
@@ -34,7 +39,7 @@ class dqn_online_solver(object):
         saver = tf.train.Saver()
         # reload variable evaluate agent
         if self.FLAGS.reload or self.FLAGS.evaluate:
-            exp_memory, loss_his, reward_his, step_count, mean_reward, step_count, episode_count, sess = reload_session(sess, saver, exp_memory)
+            exp_memory, loss_his, reward_his, step_count = reload_session(saver)
             # evaluate agent
             if self.FLAGS.evaluate:
                 eval_rew_his = eval_agent(self.num_games, self.env, exp_memory, self.sess, self.num_actions, self.gd_idx, state. self.FLAGS)
@@ -66,7 +71,14 @@ class dqn_online_solver(object):
                     batch_s, batch_a, batch_r, batch_ns, batch_done = exp_memory.sample_ex(step_count)
                     
                    # perform gradient descent to online variable
-                    _, loss = self.sess.run([self.train_step, self.mean_loss], feed_dict = {self.state:batch_s, self.action:batch_a,
+                    if FLAGS.arch == 'REM_DQN':
+                        random_coeff = make_coeff(self.num_heads)
+                        _, loss = self.sess.run([self.train_step, self.mean_loss], feed_dict = {self.state:batch_s, self.action:batch_a,
+                                                                                                self.lr:learning_rate, self.batch_state:batch_ns,
+                                                                                             self.batch_reward:batch_r,self.batch_done:batch_done,
+                                                                                             self.rco1:random_coeff, self.rco2:random_coeff}) 
+                    else:
+                        _, loss = self.sess.run([self.train_step, self.mean_loss], feed_dict = {self.state:batch_s, self.action:batch_a,
                                                                                             self.lr:learning_rate, self.batch_state:batch_ns,
                                                                                             self.batch_reward:batch_r,self.batch_done:batch_done})
                     loss_epi += loss
@@ -100,7 +112,7 @@ class dqn_online_solver(object):
             if self.FLAGS.verbose:
                 show_process(self.FLAGS, episode_count ,rew_epi, global_avg_reward, best_reward, loss_epi, eps, learning_rate, step_count, 
                              step_start, time1, reward_his, step_his, mean_reward, exp_memory, loss_his, self.sess, saver)
-
+                
             # increase episode_count
             episode_count += 1
             
