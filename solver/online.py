@@ -3,10 +3,9 @@ import tensorflow as tf
 import math
 import gym
 from utils import *
-from .base import e_greedy_execute, env_step, show_process
+from .base import e_greedy_execute, env_step, show_process, reload_session
 import time
 from matplotlib import pyplot as plt
-from PIL import Image
 
 class dqn_online_solver(object):
     
@@ -39,7 +38,7 @@ class dqn_online_solver(object):
         saver = tf.train.Saver()
         # reload variable evaluate agent
         if self.FLAGS.reload or self.FLAGS.evaluate:
-            exp_memory, loss_his, reward_his, step_count = reload_session(saver)
+            exp_memory, loss_his, reward_his, step_count, mean_reward, step_count, episode_count, sess = reload_session(sess, saver, exp_memory)
             # evaluate agent
             if self.FLAGS.evaluate:
                 eval_rew_his = eval_agent(self.num_games, self.env, exp_memory, self.sess, self.num_actions, self.gd_idx, state. self.FLAGS)

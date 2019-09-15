@@ -106,12 +106,15 @@ def eval_agent(num_games, env, exp_memory, sess, num_actions, greedy_action, gd_
     print('Std reward', np.std(reward_his))
     return reward_his
 
-def reload_session(saver, exp_memory):
+def reload_session(sess, saver, exp_memory):
     saver.restore(sess, "./tmp/model.ckpt")
     exp_memory.memory_frame = np.load('./results/replay_memory')       
     exp_memory.memory_a_r = np.load('./results/replay_memory2')
     loss_his = np.load('./results/loss_his')
     reward_his = np.load('./results/reward_his')
-    step_count = len(loss_his)-1
-    return exp_memory, loss_his, reward_his, step_count
+    mean_reward = np.load('./results/mean_loss')
+    step_his = np.load('./results/step_his')
+    step_count = step_his[-1]
+    episode_count = len(loss_his)
+    return exp_memory, loss_his, reward_his, step_count, mean_reward, step_count, episode_count, sess
  
