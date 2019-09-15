@@ -14,8 +14,7 @@ class C51(DQN):
     def model(self, network):
         state = tf.placeholder(tf.uint8, [None, 84, 84, 4])
         action = tf.placeholder(tf.int32, [None])
-        q_val =  tf.placeholder(tf.float32, [None])
-
+        
         batch_ns = tf.placeholder(tf.uint8, [None, 84, 84, 4])
         batch_rew = tf.placeholder(tf.float32, [None])
         batch_done = tf.placeholder(tf.float32, [None])
@@ -67,7 +66,7 @@ class C51(DQN):
                                            
     def categorical_algorithm(self, q_online, q_target, upt_support):
         for i in range(self.num_heads):
-            zi_prob = tf.reduce_sum(q_online*tf.one_hot(i*np.ones((self.mini_batch,)), self.num_heads, dtype = 'float32'), axis = 1, keepdims = True)
+            zi_prob = tf.reduce_sum(q_online*tf.one_hot(i*tf.ones([self.mini_batch,], tf.int32), self.num_heads, dtype = 'float32'), axis = 1, keepdims = True)
             project_zi_prob = tf.reduce_sum(tf.clip_by_value((1 - tf.abs(tf.clip_by_value(upt_support, self.vmin, self.vmax) - zi_prob)/((self.vmax-self.vmin)/(self.num_heads-1))), 0, 1) * q_target, axis = 1, keepdims = True) # of shape (batch_size,1)
             if i == 0:
                 project_prob = project_zi_prob

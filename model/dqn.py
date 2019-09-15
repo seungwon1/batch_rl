@@ -52,20 +52,24 @@ class DQN(object):
         else:
             print('inappropriate network')
             raise
+            
+    def huber_loss(self, err, delta = 1.0):
+        loss = tf.reduce_mean(tf.where(tf.abs(err) < delta, tf.square(err) * 0.5, delta * (tf.abs(err) - 0.5 * delta)))
+        return loss            
       
     def dqn_loss(self,label, pred, loss_type = 'huber', delta = 1.0): # calculate loss
         if loss_type == 'mse':
             loss = tf.losses.mean_squared_error(label, pred)
         elif loss_type == 'huber':
-            err = label - pred
-            loss = tf.reduce_mean(tf.where(tf.abs(err) < delta, tf.square(err) * 0.5, delta * (tf.abs(err) - 0.5 * delta)))
+            error = label - pred
+            loss = self.huber_loss(error, delta = delta)
         return loss
     
     # define optimizer
     def dqn_optimizer(self, loss, variables):
         lr = tf.placeholder(tf.float32, shape=[])
         if self.opt == 'adam':
-            optimizer = tf.train.AdamOptimizer(learning_rate= lr, epsilon=1e-4) # self.lf
+            optimizer = tf.train.AdamOptimizer(learning_rate= lr, epsilon=0.01/32) # self.lf , # eps 1e-4 for fast convergence, 0.01/32 for QR dqn
         elif self.opt == 'rmsprop':
             # decay: squred gradient momentum, momentum: gardient momentum
             optimizer = tf.train.RMSPropOptimizer(self.lr, epsilon = 0.01, decay = 0.95, momentum = 0.95) 
