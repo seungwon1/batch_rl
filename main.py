@@ -44,6 +44,7 @@ flags.DEFINE_bool('clip', False, 'gradient clipping') # True for dqn fast conv a
 # Others
 flags.DEFINE_bool('verbose', True, 'print loss during trainig')
 flags.DEFINE_bool('reload', False, 'load previous session ')
+flags.DEFINE_integer('load_step', 0, 'load file step')
 flags.DEFINE_bool('evaluate', False, 'evaluate trained agent ')
 flags.DEFINE_integer('print_every', 10, 'print interval')
 flags.DEFINE_integer('eval_every', 100, 'evaluation interval')
@@ -73,25 +74,18 @@ def main():
         
     elif FLAGS.arch == 'C51':
         
-        algo = model.C51(num_actions = action_space) #, num_heads = FLAGS.num_heads, lr = FLAGS.lr, opt = FLAGS.opt, clipping = FLAGS.clip, arch = FLAGS.arch)
+        algo = model.C51(num_actions = action_space) #, num_heads = FLAGS.num_heads, lr = FLAGS.lr, arch = FLAGS.arch) ... 
         state, action, est_q_online, greedy_idx, raw_est_q = algo.model('online') # online network
-        pkg1 = (state, action, greedy_idx) # est_q_online, raw_est_q
+        pkg1 = (state, action, greedy_idx)
     
         batch_ns, batch_rew, batch_done, project_prob, est_q_target = algo.model('target') # target network
-        pkg2 = (batch_ns, batch_rew, batch_done) # update_support,  , est_q_target
+        pkg2 = (batch_ns, batch_rew, batch_done) 
                 
         var_online = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope= 'online')
         var_target = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope= 'target')
         
-        #project_prob = algo.categorical_algorithm(q_target=est_q_target, upt_support=update_support)
-        #project_prob = algo.categorical_algorithm(est_q_target, batch_rew, batch_done)
-        pkg3 = (project_prob, est_q_online, est_q_target)
-        
         mean_loss = algo.c51_loss(project_prob, est_q_online)
-        #mean_loss = algo.c51_loss(project_prob, raw_est_q)
         train_step, lr = algo.dqn_optimizer(mean_loss, var_online)
-        #train_step = algo.dqn_optimizer(mean_loss, var_online)
-
         
     elif FLAGS.arch == 'QR_DQN':
         algo = model.QR_DQN(num_actions = action_space) 
@@ -139,7 +133,7 @@ def main():
     sess.run([tf.assign(t, o) for t, o in zip(var_target, var_online)])
     
     dqnsolver = solver.dqn_online_solver(env, train_step, lr, mean_loss, action_space, var_online, var_target, 
-                                         sess, pkg1, pkg2, FLAGS, pkg3)
+                                         sess, pkg1, pkg2, FLAGS)
     
     loss_his, reward_his, mean_reward, eval_his = dqnsolver.train()
     

@@ -9,7 +9,7 @@ from matplotlib import pyplot as plt
 
 class dqn_online_solver(object):
     
-    def __init__(self, env, train_step, lr, loss, action_space, var_online, var_target, sess, pkg1, pkg2, FLAGS, pkg3):
+    def __init__(self, env, train_step, lr, loss, action_space, var_online, var_target, sess, pkg1, pkg2, FLAGS):
         
         self.env = env
         self.train_step = train_step
@@ -27,7 +27,6 @@ class dqn_online_solver(object):
         else:
             self.state, self.action, self.gd_idx = pkg1 
             self.batch_state, self.batch_reward, self.batch_done = pkg2            
-            self.project_prob, self.est_q_online, self.est_q_target = pkg3
             
     def train(self):
         step_count, episode_count = 0, 0
@@ -39,8 +38,8 @@ class dqn_online_solver(object):
         saver = tf.train.Saver()
         # reload variable evaluate agent
         if self.FLAGS.reload or self.FLAGS.evaluate:
-            exp_memory, loss_his, reward_his, step_count, mean_reward, step_count, episode_count, self.sess = reload_session(self.sess, saver, 
-                                                                                                                        exp_memory, self.FLAGS)
+            exp_memory, loss_his, reward_his, step_count, mean_reward, episode_count, step_his, step_start, self.sess = reload_session(self.sess, saver, exp_memory, self.FLAGS)
+            
             # evaluate agent
             if self.FLAGS.evaluate:
                 eval_rew_his = eval_agent(self.num_games, self.env, exp_memory, self.sess, self.num_actions, self.gd_idx, state. self.FLAGS)
@@ -49,7 +48,6 @@ class dqn_online_solver(object):
         while step_count < self.FLAGS.max_frames:
             rew_epi, loss_epi = 0, 0   
             done = False
-            step_start = step_count
             s_t = self.env.reset()   
             if step_count == 0: # only save first frame
                 exp_memory.save_ex(s_t, None, None, None, None, step_count = step_count)
@@ -83,15 +81,6 @@ class dqn_online_solver(object):
                                                                                             self.batch_state:batch_ns,
                                                                                             self.batch_reward:batch_r,self.batch_done:batch_done})
                     loss_epi += loss # self.lr:learning_rate, 
-                    
-                    
-                    ls2 = tf.reduce_mean(-tf.reduce_sum(self.project_prob * tf.log(self.est_q_online), axis = 1))
-                    d = sess.run(ls2, feed_dict={self.state:batch_s, self.action:batch_a,
-                                                                                            self.batch_state:batch_ns,
-                                                                                            self.batch_reward:batch_r,self.batch_done:batch_done})
-                    print(ls2, loss)
-                   
-                    
                     
                     # linearly decaying epsilon, (learning rate) for every 4th step
                     eps = linear_decay(step_count, start =self.FLAGS.eps, end = self.FLAGS.final_eps, frame = 1000000)
