@@ -9,11 +9,11 @@ from matplotlib import pyplot as plt
 
 class dqn_online_solver(object):
     
-    def __init__(self, env, train_step, lr, loss, action_space, var_online, var_target, sess, pkg1, pkg2, FLAGS):
+    def __init__(self, env, train_step, lr, loss, action_space, var_online, var_target, sess, pkg1, pkg2, FLAGS, pkg3):
         
         self.env = env
         self.train_step = train_step
-        self.lr = lr
+        #self.lr = lr
         self.mean_loss = loss
         self.num_actions = action_space
         self.var_online = var_online
@@ -21,13 +21,14 @@ class dqn_online_solver(object):
         self.sess = sess
         self.FLAGS = FLAGS
         
-        if FLAGS.arch == 'REM_DQN':
+        if self.FLAGS.arch == 'REM_DQN':
             self.state, self.action, self.gd_idx, self.rco1 = pkg1 
             self.batch_state, self.batch_reward, self.batch_done, self.rco2 = pkg2
         else:
             self.state, self.action, self.gd_idx = pkg1 
             self.batch_state, self.batch_reward, self.batch_done = pkg2            
-        
+            self.project_prob, self.est_q_online, self.est_q_target = pkg3
+            
     def train(self):
         step_count, episode_count = 0, 0
         exp_memory = ex_replay(memory_size = self.FLAGS.replay_size, batch_size = self.FLAGS.batch_size) # initialize experience replay
@@ -38,7 +39,8 @@ class dqn_online_solver(object):
         saver = tf.train.Saver()
         # reload variable evaluate agent
         if self.FLAGS.reload or self.FLAGS.evaluate:
-            exp_memory, loss_his, reward_his, step_count, mean_reward, step_count, episode_count, sess = reload_session(sess, saver, exp_memory)
+            exp_memory, loss_his, reward_his, step_count, mean_reward, step_count, episode_count, self.sess = reload_session(self.sess, saver, 
+                                                                                                                        exp_memory, self.FLAGS)
             # evaluate agent
             if self.FLAGS.evaluate:
                 eval_rew_his = eval_agent(self.num_games, self.env, exp_memory, self.sess, self.num_actions, self.gd_idx, state. self.FLAGS)
@@ -70,7 +72,7 @@ class dqn_online_solver(object):
                     batch_s, batch_a, batch_r, batch_ns, batch_done = exp_memory.sample_ex(step_count)
                     
                    # perform gradient descent to online variable
-                    if FLAGS.arch == 'REM_DQN':
+                    if self.FLAGS.arch == 'REM_DQN':
                         random_coeff = make_coeff(self.num_heads)
                         _, loss = self.sess.run([self.train_step, self.mean_loss], feed_dict = {self.state:batch_s, self.action:batch_a,
                                                                                                 self.lr:learning_rate, self.batch_state:batch_ns,
@@ -78,19 +80,28 @@ class dqn_online_solver(object):
                                                                                              self.rco1:random_coeff, self.rco2:random_coeff}) 
                     else:
                         _, loss = self.sess.run([self.train_step, self.mean_loss], feed_dict = {self.state:batch_s, self.action:batch_a,
-                                                                                            self.lr:learning_rate, self.batch_state:batch_ns,
+                                                                                            self.batch_state:batch_ns,
                                                                                             self.batch_reward:batch_r,self.batch_done:batch_done})
-                    loss_epi += loss
+                    loss_epi += loss # self.lr:learning_rate, 
+                    
+                    
+                    ls2 = tf.reduce_mean(-tf.reduce_sum(self.project_prob * tf.log(self.est_q_online), axis = 1))
+                    d = sess.run(ls2, feed_dict={self.state:batch_s, self.action:batch_a,
+                                                                                            self.batch_state:batch_ns,
+                                                                                            self.batch_reward:batch_r,self.batch_done:batch_done})
+                    print(ls2, loss)
+                   
+                    
                     
                     # linearly decaying epsilon, (learning rate) for every 4th step
-                    eps = linear_decay(step_count, start =1, end = 0.1, frame = 1000000)
+                    eps = linear_decay(step_count, start =self.FLAGS.eps, end = self.FLAGS.final_eps, frame = 1000000)
                     if self.FLAGS.fast_test:
                         if step_count > 1e+6:
                             eps = linear_decay(step_count - 1e+6, start = 0.1, end = 0.01, frame = self.FLAGS.max_frames/2 - 1e+6)
                         if step_count >= self.FLAGS.max_frames/5 + 1:
                             learning_rate = linear_decay(step_count - self.FLAGS.max_frames/5 + 1, start = 1e-4,
                                                          end = 5e-5, frame = 0.4*self.FLAGS.max_frames)
-                    
+                
                 # Reset target_variables in every interval(target_reset)
                 if step_count % self.FLAGS.target_reset == 0:
                     self.sess.run( [tf.assign(t, o) for t, o in zip(self.var_target, self.var_online)])
@@ -100,7 +111,7 @@ class dqn_online_solver(object):
                 rew_epi += r_t
 
             # save loss, reward per an episode, compute average reward on previous 100 number of episodes
-            loss_his.append(loss_epi)
+            loss_his.append(loss_epi/(step_count-step_start))
             reward_his.append(rew_epi)
             step_his.append(step_count)
             global_avg_reward = np.mean(reward_his[-100:])

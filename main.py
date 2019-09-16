@@ -24,7 +24,7 @@ flags.DEFINE_float('gamma', 0.99, 'discount factor')
 # Trainig method(offline, online), options
 flags.DEFINE_string('setting', 'offline', 'Training method')
 flags.DEFINE_bool('online', True, 'Training type, offline if False')
-flags.DEFINE_float('eps', 0.99, 'epsilon start')
+flags.DEFINE_float('eps', 1.0, 'epsilon start')
 flags.DEFINE_float('final_eps', 0.1, 'final value of epsilon')
 flags.DEFINE_string('eps_decay', 'linear', 'epsilon deacy')
 flags.DEFINE_integer('train_start', 50000, 'train starts after this number of frame' )
@@ -38,8 +38,8 @@ flags.DEFINE_integer('max_frames', 6000000, 'maximum number of frames') # 500000
 
 # Optimizer options
 flags.DEFINE_string('opt', 'adam', 'Optimization method') # rmsprop
-flags.DEFINE_float('lr', 0.0001, 'learning rate')
-flags.DEFINE_bool('clip', True, 'gradient clipping')
+flags.DEFINE_float('lr', 0.00025, 'learning rate') # 0.0001
+flags.DEFINE_bool('clip', False, 'gradient clipping') # True for dqn fast conv and sanity check 
 
 # Others
 flags.DEFINE_bool('verbose', True, 'print loss during trainig')
@@ -48,7 +48,7 @@ flags.DEFINE_bool('evaluate', False, 'evaluate trained agent ')
 flags.DEFINE_integer('print_every', 10, 'print interval')
 flags.DEFINE_integer('eval_every', 100, 'evaluation interval')
 flags.DEFINE_integer('seed', 6550, 'seed number')
-flags.DEFINE_bool('fast_test', True, 'test mode for faster convergence') # set False and FLAGS.clip as False to make Nature DQN ENV
+flags.DEFINE_bool('fast_test', False, 'test mode for faster convergence') # set False and FLAGS.clip as False to make Nature DQN ENV # True for dqn sanity check
 
 def main():
     sess = get_session()
@@ -75,17 +75,23 @@ def main():
         
         algo = model.C51(num_actions = action_space) #, num_heads = FLAGS.num_heads, lr = FLAGS.lr, opt = FLAGS.opt, clipping = FLAGS.clip, arch = FLAGS.arch)
         state, action, est_q_online, greedy_idx, raw_est_q = algo.model('online') # online network
-        pkg1 = (state, action, greedy_idx) # est_q_online,  , raw_est_q
+        pkg1 = (state, action, greedy_idx) # est_q_online, raw_est_q
     
-        batch_ns, batch_rew, batch_done, update_support, est_q_target = algo.model('target') # target network
+        batch_ns, batch_rew, batch_done, project_prob, est_q_target = algo.model('target') # target network
         pkg2 = (batch_ns, batch_rew, batch_done) # update_support,  , est_q_target
                 
         var_online = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope= 'online')
         var_target = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope= 'target')
-
-        project_prob = algo.categorical_algorithm(q_online=est_q_online, q_target=est_q_target, upt_support=update_support)
-        mean_loss = algo.c51_loss(project_prob, raw_est_q)
+        
+        #project_prob = algo.categorical_algorithm(q_target=est_q_target, upt_support=update_support)
+        #project_prob = algo.categorical_algorithm(est_q_target, batch_rew, batch_done)
+        pkg3 = (project_prob, est_q_online, est_q_target)
+        
+        mean_loss = algo.c51_loss(project_prob, est_q_online)
+        #mean_loss = algo.c51_loss(project_prob, raw_est_q)
         train_step, lr = algo.dqn_optimizer(mean_loss, var_online)
+        #train_step = algo.dqn_optimizer(mean_loss, var_online)
+
         
     elif FLAGS.arch == 'QR_DQN':
         algo = model.QR_DQN(num_actions = action_space) 
@@ -94,7 +100,7 @@ def main():
     
         batch_ns, batch_rew, batch_done, est_q_target = algo.model('target') # target network
         pkg2 = (batch_ns, batch_rew, batch_done) # , est_q_target
-                
+        
         var_online = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope= 'online')
         var_target = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope= 'target')
 
@@ -133,7 +139,7 @@ def main():
     sess.run([tf.assign(t, o) for t, o in zip(var_target, var_online)])
     
     dqnsolver = solver.dqn_online_solver(env, train_step, lr, mean_loss, action_space, var_online, var_target, 
-                                         sess, pkg1, pkg2, FLAGS)
+                                         sess, pkg1, pkg2, FLAGS, pkg3)
     
     loss_his, reward_his, mean_reward, eval_his = dqnsolver.train()
     

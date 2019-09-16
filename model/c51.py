@@ -4,12 +4,13 @@ from .dqn import DQN
 
 class C51(DQN):
     
-    def __init__(self, num_actions, lr = 0.00025, mini_batch = 32, opt = 'rmsprop', clipping = False, arch = 'C51', gamma = 0.99, vmax = 10, vmin = -10, num_heads=51):
-         
+    def __init__(self, num_actions, lr = 0.00025, mini_batch = 32, opt = 'adam', clipping = False, arch = 'C51', gamma = 0.99, vmax = 10.0, vmin = -10.0, num_heads=51):
+        
         super(C51, self).__init__(num_actions, lr, mini_batch, opt, clipping, arch, gamma)
         self.vmax = vmax
         self.vmin = vmin
         self.num_heads = num_heads
+        self.delta = (self.vmax-self.vmin)/(self.num_heads-1)
         
     def model(self, network):
         state = tf.placeholder(tf.uint8, [None, 84, 84, 4])
@@ -35,15 +36,16 @@ class C51(DQN):
             with tf.variable_scope('fc'):
                 fc1 = tf.contrib.layers.fully_connected(conv3_flatten, 512)
                 out = tf.contrib.layers.fully_connected(fc1, self.num_actions * self.num_heads, activation_fn=None) # of shape (N,num_ac*num*heads)
-            
+                
             out = tf.reshape(out, (tf.shape(out)[0], self.num_actions, self.num_heads)) # of shape (N, num_actions, num_heads)
             out_softmax = tf.nn.softmax(out, axis = 2) # apply softmax, of shape (N, num_actions, num_heads)
+
+            support_atoms = tf.reshape(tf.range(self.vmin, self.vmax+self.delta, self.delta, dtype=tf.float64), [-1, 1]) 
+            support_atoms = tf.cast(support_atoms, tf.float32) # support atoms 'value' zi, shape (num_heads, 1)
             
-            support_atoms = tf.reshape(tf.range(self.vmin, self.vmax+(self.vmax-self.vmin)/(self.num_heads-1), (self.vmax-self.vmin)/(self.num_heads-1)), [-1, 1]) # support atoms 'value' zi, shape (num_heads, 1)
-            mean_qsa = tf.reshape(out_softmax, [-1, self.num_heads])
-            mean_qsa = tf.reshape(tf.matmul(mean_qsa, support_atoms), [-1, self.num_actions]) # of shape (N, num_actions)
+            mean_qsa = tf.reshape(out_softmax, [-1, self.num_heads]) # of shape (N*num_actions, num_heads)
+            mean_qsa = tf.reshape(tf.matmul(mean_qsa, support_atoms), [-1, self.num_actions]) # of shape (N*num_actions, 1) to (N, num_actions)
             greedy_idx = tf.argmax(mean_qsa, axis = 1) # of shape (N, )
-            # greedy_action_value = tf.reduce_max(mean_qsa, axis = 1) # of shape (N, )
             
             if network == 'online':
                 action_mask = tf.reshape(tf.one_hot(action, self.num_actions, dtype='float32'), [-1, self.num_actions, 1]) #of shape (N, num_act,1)
@@ -58,22 +60,29 @@ class C51(DQN):
             return state, action, est_q, greedy_idx, raw_est_q # q_val 
         
         elif network == 'target': # same as network
-            update_support = tf.reshape(batch_rew, [-1, 1]) + self.gamma* tf.reshape((1-batch_done),[-1, 1]) * est_q # of shape (N, num_heads)
-            return batch_ns, batch_rew, batch_done, update_support, est_q
-        else:
-            print('inappropriate network')
-            raise
-                                           
-    def categorical_algorithm(self, q_online, q_target, upt_support):
-        for i in range(self.num_heads):
-            zi_prob = tf.reduce_sum(q_online*tf.one_hot(i*tf.ones([self.mini_batch,], tf.int32), self.num_heads, dtype = 'float32'), axis = 1, keepdims = True)
-            project_zi_prob = tf.reduce_sum(tf.clip_by_value((1 - tf.abs(tf.clip_by_value(upt_support, self.vmin, self.vmax) - zi_prob)/((self.vmax-self.vmin)/(self.num_heads-1))), 0, 1) * q_target, axis = 1, keepdims = True) # of shape (batch_size,1)
-            if i == 0:
-                project_prob = project_zi_prob
-            else:
-                project_prob = tf.concat([project_prob, project_zi_prob], axis = 1)
-        return project_prob # of shape (batch_size, num_heads), projected prob distribution of next state Q(s',a) 
+            project_prob = self.categorical_algorithm(est_q, batch_rew, batch_done)
+            return batch_ns, batch_rew, batch_done, project_prob, est_q
+
+    def categorical_algorithm(self, q_target, rew, done): # rew done of shape (32, ), q_target of shape (32, 51)
+        m0 = tf.zeros([self.mini_batch, self.num_heads], tf.float32)  # of shape (32, 51)
+        m1 = tf.ones([self.mini_batch, self.num_heads], tf.float32)  # of shape (32, 51)
+        for j in range(self.num_heads):
+            zj = tf.ones([self.mini_batch,], tf.float32) * (self.vmin + j*self.delta) # of shape (32,)
+            tzj_1 = (1-done) * (rew + self.gamma*zj) # of shape (32,)
+            tzj_2 = (done)*rew # of shape (32,)
+            tzj = tf.clip_by_value(tzj_1, self.vmin, self.vmax) + tf.clip_by_value(tzj_2, self.vmin, self.vmax) # of shape (32,)
+            bj = (tzj - self.vmin)/self.delta # of shape (32,)
+            l, u = tf.floor(bj), tf.ceil(bj)  # of shape (32,)
+            idx_l, idx_u = tf.cast(l, tf.int32), tf.cast(u, tf.int32) # for indexing
+            
+            ml = tf.reduce_sum(q_target*tf.one_hot(j*tf.ones([self.mini_batch,],tf.int32),self.num_heads, dtype=tf.float32), axis = 1)*(u-bj) # (32,)
+            mu = tf.reduce_sum(q_target*tf.one_hot(j*tf.ones([self.mini_batch,],tf.int32),self.num_heads, dtype=tf.float32), axis = 1)*(bj-l) # (32,)
+            
+            m0 += (m1 * tf.one_hot(idx_l, self.num_heads, dtype=tf.float32)) * tf.reshape(ml, [-1, 1]) # of shape (32, 51)
+            m0 += (m1 * tf.one_hot(idx_u, self.num_heads, dtype=tf.float32)) * tf.reshape(mu, [-1, 1]) # of shape (32, 51)
+        return m0
                                                 
     def c51_loss(self, project_prob, pred_prob): # Cross-entropy loss, project_prob is distribution after Bellman update
-        loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(labels = tf.stop_gradient(project_prob), logits = pred_prob)) # for numerical stability 
+        loss = tf.reduce_mean(-tf.reduce_sum(tf.stop_gradient(project_prob) * tf.log(pred_prob+1e-7), axis = 1))
+        #loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(labels = tf.stop_gradient(project_prob), logits = pred_prob)) # for numerical stability 
         return loss
