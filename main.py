@@ -13,7 +13,7 @@ FLAGS = flags.FLAGS
 # Game environments
 flags.DEFINE_string('game', 'PongNoFrameskip-v4', 'Atari environments') # 'Pong-v0'
 flags.DEFINE_integer('skip_frame', 4, 'Number of frames skipped') 
-flags.DEFINE_integer('update_freq', 4, 'Number of frames between each SGD') 
+flags.DEFINE_integer('update_freq', 4, 'Number of frames between each SGD')
 flags.DEFINE_integer('no_op', 30, 'Number of random actions executed before the agent starts an episode') 
 
 # Model options
@@ -74,7 +74,7 @@ def main():
         
     elif FLAGS.arch == 'C51':
         
-        algo = model.C51(num_actions = action_space) #, num_heads = FLAGS.num_heads, lr = FLAGS.lr, arch = FLAGS.arch) ... 
+        algo = model.C51(num_actions = action_space, lr = FLAGS.lr) #, num_heads = FLAGS.num_heads, lr = FLAGS.lr, arch = FLAGS.arch) ... 
         state, action, est_q_online, greedy_idx, raw_est_q = algo.model('online') # online network
         pkg1 = (state, action, greedy_idx)
     
@@ -88,7 +88,7 @@ def main():
         train_step, lr = algo.dqn_optimizer(mean_loss, var_online)
         
     elif FLAGS.arch == 'QR_DQN':
-        algo = model.QR_DQN(num_actions = action_space) 
+        algo = model.QR_DQN(num_actions = action_space, lr = FLAGS.lr) 
         state, action, est_q_online, greedy_idx, _ = algo.model('online') # online network
         pkg1 = (state, action, greedy_idx) # est_q_online, 
     
@@ -132,7 +132,7 @@ def main():
     sess.run(tf.global_variables_initializer())    
     sess.run([tf.assign(t, o) for t, o in zip(var_target, var_online)])
     
-    dqnsolver = solver.dqn_online_solver(env, train_step, lr, mean_loss, action_space, var_online, var_target, 
+    dqnsolver = solver.dqn_online_solver(env, train_step, mean_loss, action_space, var_online, var_target, 
                                          sess, pkg1, pkg2, FLAGS)
     
     loss_his, reward_his, mean_reward, eval_his = dqnsolver.train()
