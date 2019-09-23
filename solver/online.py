@@ -9,11 +9,10 @@ from matplotlib import pyplot as plt
 
 class dqn_online_solver(object):
     
-    def __init__(self, env, train_step, lr, loss, action_space, var_online, var_target, sess, pkg1, pkg2, FLAGS):
+    def __init__(self, env, train_step, loss, action_space, var_online, var_target, sess, pkg1, pkg2, FLAGS):
         
         self.env = env
         self.train_step = train_step
-        #self.lr = lr
         self.mean_loss = loss
         self.num_actions = action_space
         self.var_online = var_online
@@ -48,6 +47,7 @@ class dqn_online_solver(object):
         while step_count < self.FLAGS.max_frames:
             rew_epi, loss_epi = 0, 0   
             done = False
+            step_start = step_count
             s_t = self.env.reset()   
             if step_count == 0: # only save first frame
                 exp_memory.save_ex(s_t, None, None, None, None, step_count = step_count)
@@ -59,7 +59,7 @@ class dqn_online_solver(object):
                 a_t = e_greedy_execute(self.num_actions, eps, greedy_action)
                 
                 next_state, r_t, done, info = self.env.step(a_t) #env_step(self.env, s_t, a_t, self.FLAGS) # step ahead. skip every kth frame  
-
+       
                 # save (s_t, a_t, r_t, s_t+1) to memory
                 exp_memory.save_ex(s_t, a_t, r_t, next_state, done, step_count = step_count) # a_t and r_t is int and float
                 s_t = next_state
