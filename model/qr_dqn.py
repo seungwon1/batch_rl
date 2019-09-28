@@ -60,6 +60,6 @@ class QR_DQN(DQN):
         indicator = tf.cast(u < 0.0, tf.float32)
         quentiles = ((np.arange(self.num_heads)+0.5)/float(self.num_heads)).reshape(1,self.num_heads, 1)
         
-        loss = tf.abs(quentiles - indicator) * self.huber_loss(u, delta) # (N, H, H) # tf.stop_gradient(indicator)
+        loss = tf.abs(quentiles - tf.stop_gradient(indicator)) * self.huber_loss(u, delta) # (N, H, H) # indicator
         loss = tf.reduce_mean(tf.reduce_sum(tf.reduce_mean(loss, axis = 2), axis = 1)) 
         return loss

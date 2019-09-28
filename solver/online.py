@@ -83,13 +83,14 @@ class dqn_online_solver(object):
                     loss_epi += loss # self.lr:learning_rate, 
                     
                     # linearly decaying epsilon, (learning rate) for every 4th step
-                    eps = linear_decay(step_count, start =self.FLAGS.eps, end = self.FLAGS.final_eps, frame = 1000000)
+                    eps = linear_decay(step_count, start =self.FLAGS.eps, end = self.FLAGS.final_eps, frame = 1100000) # frame = 1000000
                     if self.FLAGS.fast_test:
                         if step_count > 1e+6:
                             eps = linear_decay(step_count - 1e+6, start = 0.1, end = 0.01, frame = self.FLAGS.max_frames/2 - 1e+6)
                         if step_count >= self.FLAGS.max_frames/5 + 1:
                             learning_rate = linear_decay(step_count - self.FLAGS.max_frames/5 + 1, start = 1e-4,
                                                          end = 5e-5, frame = 0.4*self.FLAGS.max_frames)
+                    
                 
                 # Reset target_variables in every interval(target_reset)
                 if step_count % self.FLAGS.target_reset == 0:
