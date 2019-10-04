@@ -4,7 +4,7 @@ This repository contains tensorflow implementation for replicating the experimen
 
 ## Paper Review
 - Blog: https://medium.com/@seungwonkim_57156/deep-learning-papers-review-striving-for-simplicity-in-off-policy-deep-reinforcement-learning-ac49c4aa26e2
-- Pdf: https://github.com/seungwon1/batch_rl/blob/master/paper_review.pdf
+- Pdf: https://github.com/seungwon1/batch_rl/blob/master/docs/paper_review.pdf
 
 ## Online Performance
 - Sanity Check to ensure that DQN algorithms work well
