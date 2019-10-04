@@ -28,7 +28,7 @@ Rishabh Agarwal, Dale Schuurmans, Mohammad Norouzi. Striving for Simplicity in O
 
 - This paper investigates training DQN with the batch setting, i.e. “ Is it possible to make successful agents using completely on offline logged data?” It presents the performance of distributional RL, nature DQN(2015 Mnih et al) on Atrai 2600 games in both batch setting(offline setting) and online setting. Surprisingly, offline QR-DQN outperforms online C51 and online DQN, which is contrary to recent work.
 
-- This paper also tries to make RL algorithms as simple as possible. In spite of recent advances in DQN, those might lead to complex hypothesis and it is more likely to coincidentally fits data than simple hypothesis does (Occam’s razor). It is important to ask “ Are those advances really necessary? “ The paper proposes Ensemble DQN and Random Ensemble Mixture (REM) DQN, which are way simpler than distributional RL, and it shows that REM DQN outperforms C51 and QR-DQN in the offline setting and online REM DQN performs comparably with online QR-DQN.
+- This paper also tries to make RL algorithms as simple as possible. In spite of recent advances in DQN, those might lead to complex hypothesis and it is more likely to coincidentally fits data than simple hypothesis does (Occam’s razor). It is important to ask “ Are those advances really necessary?“ The paper proposes Ensemble DQN and Random Ensemble Mixture (REM) DQN, which are way simpler than distributional RL, and it shows that REM DQN outperforms C51 and QR-DQN in the offline setting and online REM DQN performs comparably with online QR-DQN.
 
 ## Proposed Architecture
 
