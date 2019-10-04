@@ -5,16 +5,24 @@ Rishabh Agarwal, Dale Schuurmans, Mohammad Norouzi. Striving for Simplicity in O
 ## Background
 - Off-policy Q-learning allows two different policies: behavior policy and target policy. Behavior policy selects an action, whereas the target policy is used to estimate the next state-action value. On the other hand, on-policy learning uses the same policy for choosing the action to execute and estimating the next state-action value. Additionally, the term off-policy can be used to indicate pure exploratory random behavior, which is literally off from the current policy, whereas on-policy can suggest following current policy, which means acting greedily or choosing the action using epsilon-greedy strategy
 
-![QL](https://github.com/seungwon1/batch_rl/blob/master/capture/QL.PNG)
+<p align="center">
+  <img src="https://github.com/seungwon1/batch_rl/blob/master/capture/QL.PNG?raw=true" alt="Sublime's custom image"/>
+</p>
 
 - Deep Q-learning (DQN) algorithm is labeled as off-policy RL algorithm but it is considered as “online” rather than “offline” since it exploits near on-policy behavior such as epsilon-greedy with an experience replay. Training DQN in offline setting, i.e. batch setting, which means using data that have been already logged, doesn’t work well due to the extrapolation error. (https://arxiv.org/pdf/1812.02900.pdf)
 
-![dqn](https://github.com/seungwon1/batch_rl/blob/master/capture/dqn.PNG)
+<p align="center">
+  <img src="https://github.com/seungwon1/batch_rl/blob/master/capture/dqn.PNG?raw=true" alt="Sublime's custom image"/>
+</p>
 
 - Off-policy RL algorithms such as Q-learning are more practical and efficient to handle real-world problems with already logged data than on-policy algorithms such as policy gradient since in principle, off-policy algorithm can learn from any data collected by any policy. But off-policy RL algorithms are unstable and there is no guarantee that it converges especially when using neural networks for function approximation.
 
 - To make stable off-policy DQN, here have been various advances such as distributional RL: C51 or quantile regression DQN (QR-DQN)(https://arxiv.org/pdf/1710.10044.pdf). Both C51 and QR-DQN obatin state-of-the-art performance on Atrai 2600 games by estimating the distribution of return using support with assigned probabilities rather than estimating expected return.
-![rainbow](https://github.com/seungwon1/batch_rl/blob/master/capture/rainbow.PNG)
+
+<p align="center">
+  <img src="https://github.com/seungwon1/batch_rl/blob/master/capture/rainbow.PNG?raw=true" alt="Sublime's custom image"/>
+</p>
+
 
 ## Main point & Summary of this paper
 
