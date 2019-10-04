@@ -2,7 +2,7 @@
 
 Rishabh Agarwal, Dale Schuurmans, Mohammad Norouzi. Striving for Simplicity in Off-policy Deep Reinforcement Learning. (https://arxiv.org/abs/1907.04543)
 
-## Background
+## Background 
 - Off-policy Q-learning allows two different policies: behavior policy and target policy. Behavior policy selects an action, whereas the target policy is used to estimate the next state-action value. On the other hand, on-policy learning uses the same policy for choosing the action to execute and estimating the next state-action value. Additionally, the term off-policy can be used to indicate pure exploratory random behavior, which is literally off from the current policy, whereas on-policy can suggest following current policy, which means acting greedily or choosing the action using epsilon-greedy strategy
 
 <p align="center">
