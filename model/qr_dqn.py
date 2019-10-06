@@ -24,10 +24,10 @@ class QR_DQN(DQN):
         out = tf.reshape(out, (tf.shape(out)[0], self.num_actions, self.num_heads)) # of shape (N, num_actions, num_heads)
         greedy_idx = tf.argmax(tf.reduce_sum(out, axis = 2)/self.num_heads, axis = 1) # of shape (N, )
         
-        action_mask = tf.reshape(tf.one_hot(action, self.num_actions, dtype='float32'), [-1, self.num_actions, 1]) # of shape (N, num_act,1)
+        action_mask = tf.reshape(tf.one_hot(act, self.num_actions, dtype='float32'), [-1, self.num_actions, 1]) # of shape (N, num_act,1)
         greedy_action_mask = tf.reshape(tf.one_hot(greedy_idx, self.num_actions, dtype='float32'), [-1, self.num_actions, 1])
 
-        est_q = tf.reduce_sum(out * action_mask, axis = 1) #of shape (N,num_act,num_heads) -> (N,num_heads) which is minimizer value(z) of Q(s,a)
+        est_q = tf.reduce_sum(out * action_mask, axis = 1) # of shape (N,num_act,num_heads) -> (N,num_heads) which is minimizer value(z) of Q(s,a)
         est_q = tf.sort(est_q) # sort elements for calulating quantile regression loss
             
         greedy_action = tf.reduce_sum(out * greedy_action_mask, axis = 1)

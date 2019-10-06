@@ -4,12 +4,13 @@ from .dqn import DQN
 
 class C51(DQN):
     
-    def __init__(self, num_actions, lr = 0.00025, opt = 'adam', gamma = 0.99, arch = 'C51', vmax = 10.0, vmin = -10.0, num_heads=51):
+    def __init__(self, num_actions, lr = 0.00025, opt = 'adam', gamma = 0.99, arch = 'C51', vmax = 10.0, vmin = -10.0, num_heads=51, mini_batch=32):
         super(C51, self).__init__(num_actions, lr, opt, gamma, arch)
         self.vmax = vmax
         self.vmin = vmin
         self.num_heads = num_heads
         self.delta = (self.vmax-self.vmin)/(self.num_heads-1)
+        self.mini_batch = mini_batch
         
     # Define neural network architecture. Output layer outputs probability of each support
     def model(self, obs, act, network):
@@ -35,7 +36,7 @@ class C51(DQN):
             mean_qsa = tf.reshape(tf.matmul(mean_qsa, support_atoms), [-1, self.num_actions]) # of shape (N*num_actions, 1) to (N, num_actions)
             greedy_idx = tf.argmax(mean_qsa, axis = 1) # of shape (N, )
             
-            action_mask = tf.reshape(tf.one_hot(action, self.num_actions, dtype='float32'), [-1, self.num_actions, 1]) #of shape (N, num_act,1)
+            action_mask = tf.reshape(tf.one_hot(act, self.num_actions, dtype='float32'), [-1, self.num_actions, 1]) #of shape (N, num_act,1)
             greedy_action_mask = tf.reshape(tf.one_hot(greedy_idx, self.num_actions, dtype='float32'), [-1, self.num_actions, 1]) # (N, num_act, 1)
             
             est_q = out_softmax * action_mask # of shape (N, num_actions, num_heads)
