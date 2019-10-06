@@ -4,7 +4,6 @@ import gym
 import model
 import solver
 from utils import *
-from atari_wrappers import *
 from tensorflow.python.platform import flags
 
 FLAGS = flags.FLAGS
@@ -15,6 +14,7 @@ flags.DEFINE_string('game', 'PongNoFrameskip-v4', 'Atari environments') # 'Pong-
 flags.DEFINE_integer('skip_frame', 4, 'Number of frames skipped') 
 flags.DEFINE_integer('update_freq', 4, 'Number of frames between each SGD')
 flags.DEFINE_integer('no_op', 30, 'Number of random actions executed before the agent starts an episode') 
+flags.DEFINE_bool('life_terminate', True, 'Episode terminate condition')
 
 # Model options
 flags.DEFINE_string('arch', 'DQN', 'Nature DQN')
@@ -53,7 +53,7 @@ flags.DEFINE_bool('fast_test', False, 'test mode for faster convergence') # set 
 
 def main():
     sess = get_session()
-    env = set_seed(FLAGS.seed, FLAGS.game)
+    env = make_atari_env(FLAGS.seed, FLAGS.game, life_terminate = FLAGS.life_terminate)
     action_space = env.action_space.n
     
     if FLAGS.arch == 'DQN':
