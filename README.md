@@ -13,7 +13,6 @@ python main.py --arch=DQN --eps=1.0 --final_eps=0.1 --max_frames= 50000000 --opt
 python main.py --arch=C51 --eps=1.0 --final_eps=0.05 --max_frames= 50000000  --opt=adam --lr=0.00025
 
 python main.py --arch=QR_DQN --eps=1.0 --final_eps=0.01 --max_frames= 50000000  --opt=adam --lr=0.000005
-
 ```
 - Sanity Check to ensure that each DQN algorithm(DQN, C51, QR_DQN) works well
 - Test env: Pong
