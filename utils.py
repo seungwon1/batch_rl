@@ -8,7 +8,7 @@ import random
 from PIL import Image
 from atari_env import set_atari_env
 
-def make_atari_env(seed_number, env, life_terminate = False):
+def atari_env(seed_number, env, life_terminate = True):
     os.environ['PYTHONHASHSEED']=str(seed_number)
     random.seed(seed_number)
     np.random.seed(seed_number)

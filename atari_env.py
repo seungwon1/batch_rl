@@ -3,6 +3,7 @@ import tensorflow as tf
 import gym
 import cv2
 import random
+from collections import deque
 # reference: https://github.com/berkeleydeeprlcourse/homework/blob/master/hw3/atari_wrappers.py
 
 class random_start_env(gym.Wrapper):
@@ -46,7 +47,7 @@ class preprocess_clip_env(gym.Wrapper):
         
     def step(self, action):
         obs, reward, done, info = self.env.step(action)
-        return self.preprocess(obs), np.sign(rew), done, info     
+        return self.preprocess(obs), np.sign(reward), done, info     
     
     def reset(self):
         return self.preprocess(self.env.reset())    
@@ -54,7 +55,7 @@ class preprocess_clip_env(gym.Wrapper):
     def preprocess(self, obs):
         images = np.reshape(np.array(obs), [1, 210, 160, 3]).astype(np.float32)
         rgb2y = 0.299*images[...,0] + 0.587*images[...,1] + 0.114*images[...,2] # compute luminance from rgb
-        resized_input = cv2.resize(rgb2y, reshape(210, 160), (84, 84)) # resize with bilinear interpolation (default)
+        resized_input = cv2.resize(rgb2y.reshape(210, 160), (84, 84)) # resize with bilinear interpolation (default)
         resized_input = resized_input.astype(np.uint8) # convert to 0-255 scale
         return resized_input # output of shape (84,84)    
 

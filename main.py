@@ -4,17 +4,17 @@ import gym
 import model
 import solver
 from utils import *
+from atari_env import *
 from tensorflow.python.platform import flags
 
 FLAGS = flags.FLAGS
- 
+
 # Set configuration for the experiments
 # Game environments
 flags.DEFINE_string('game', 'PongNoFrameskip-v4', 'Atari environments') # 'Pong-v0'
 flags.DEFINE_integer('skip_frame', 4, 'Number of frames skipped') 
 flags.DEFINE_integer('update_freq', 4, 'Number of frames between each SGD')
 flags.DEFINE_integer('no_op', 30, 'Number of random actions executed before the agent starts an episode') 
-flags.DEFINE_bool('life_terminate', True, 'Episode terminate condition')
 
 # Model options
 flags.DEFINE_string('arch', 'DQN', 'Nature DQN')
@@ -53,89 +53,26 @@ flags.DEFINE_bool('fast_test', False, 'test mode for faster convergence') # set 
 
 def main():
     sess = get_session()
-    env = make_atari_env(FLAGS.seed, FLAGS.game, life_terminate = FLAGS.life_terminate)
+    env = atari_env(FLAGS.seed, FLAGS.game)
     action_space = env.action_space.n
     
     if FLAGS.arch == 'DQN':
-        algo = model.DQN(num_actions = action_space, lr = FLAGS.lr, 
-                     opt = FLAGS.opt, clipping = FLAGS.clip, arch = FLAGS.arch)
-        
-        state, action, est_q, greedy_idx, greedy_action = algo.model('online') # online network
-        pkg1 = (state, action, greedy_idx) # greedy_action
-    
-        batch_state, batch_reward, batch_done, max_q_target = algo.model('target') # target network
-        pkg2 = (batch_state, batch_reward, batch_done) # , None , max_q_target
-        
-        var_online = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope= 'online')
-        var_target = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope= 'target')
-        
-        mean_loss = algo.dqn_loss(tf.stop_gradient(max_q_target), est_q, loss_type = FLAGS.loss_ft)  # logits (true):q_val(fixed target), pred: est_q
-        train_step, lr = algo.dqn_optimizer(mean_loss, var_online)
+        algo = model.DQN(num_actions = action_space, lr = FLAGS.lr, opt = FLAGS.opt, gamma = FLAGS.gamma, arch = FLAGS.arch)
         
     elif FLAGS.arch == 'C51':
-        
         algo = model.C51(num_actions = action_space, lr = FLAGS.lr) #, num_heads = FLAGS.num_heads, lr = FLAGS.lr, arch = FLAGS.arch) ... 
-        state, action, est_q_online, greedy_idx, raw_est_q = algo.model('online') # online network
-        pkg1 = (state, action, greedy_idx)
-    
-        batch_ns, batch_rew, batch_done, project_prob, est_q_target = algo.model('target') # target network
-        pkg2 = (batch_ns, batch_rew, batch_done) 
-                
-        var_online = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope= 'online')
-        var_target = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope= 'target')
-        
-        mean_loss = algo.c51_loss(project_prob, est_q_online)
-        train_step, lr = algo.dqn_optimizer(mean_loss, var_online)
         
     elif FLAGS.arch == 'QR_DQN':
         algo = model.QR_DQN(num_actions = action_space, lr = FLAGS.lr) 
-        state, action, est_q_online, greedy_idx, _ = algo.model('online') # online network
-        pkg1 = (state, action, greedy_idx) # est_q_online, 
-    
-        batch_ns, batch_rew, batch_done, est_q_target = algo.model('target') # target network
-        pkg2 = (batch_ns, batch_rew, batch_done) # , est_q_target
         
-        var_online = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope= 'online')
-        var_target = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope= 'target')
-
-        mean_loss = algo.loss_fn(est_q_target, est_q_online)
-        train_step, lr = algo.dqn_optimizer(mean_loss, var_online)
-    
     elif FLAGS.arch == 'ENS_DQN':
         algo = model.ENS_DQN(num_actions = action_space) 
-        state, action, est_q_online, greedy_idx, _ = algo.model('online') # online network
-        pkg1 = (state, action, greedy_idx) # est_q_online
-    
-        batch_ns, batch_rew, batch_done, est_q_target = algo.model('target') # target network
-        pkg2 = (batch_ns, batch_rew, batch_done) # est_q_target
-                
-        var_online = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope= 'online')
-        var_target = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope= 'target')
-
-        mean_loss = algo.loss_fn(est_q_target, est_q_online)
-        train_step, lr = algo.dqn_optimizer(mean_loss, var_online)
-
+        
     elif FLAGS.arch == 'REM_DQN':
         algo = model.REM_DQN(num_actions = action_space) 
-        state, action, est_q, greedy_idx, random_coeff1 = algo.model('online') # online network
-        pkg1 = (state, action, greedy_idx, random_coeff1) # est_q_online
-    
-        batch_ns, batch_rew, batch_done, est_q_target, random_coeff2 = algo.model('target') # target network
-        pkg2 = (batch_ns, batch_rew, batch_done, random_coeff2) # est_q_target
         
-        var_online = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope= 'online')
-        var_target = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope= 'target')
-
-        mean_loss = algo.loss_fn(est_q_target, est_q_online)
-        train_step, lr = algo.dqn_optimizer(mean_loss, var_online)        
-        
-    sess.run(tf.global_variables_initializer())    
-    sess.run([tf.assign(t, o) for t, o in zip(var_target, var_online)])
-    
-    dqnsolver = solver.dqn_online_solver(env, train_step, mean_loss, action_space, var_online, var_target, 
-                                         sess, pkg1, pkg2, FLAGS)
-    
-    loss_his, reward_his, mean_reward, eval_his = dqnsolver.train()
+    dqnsolver = solver.DQNsolver(env, sess, algo, FLAGS)
+    dqnsolver.train()
     
 if __name__ == "__main__":
     main()   

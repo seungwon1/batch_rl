@@ -3,27 +3,9 @@ import tensorflow as tf
 import math
 import gym
 import time
+import os
 from matplotlib import pyplot as plt
 from utils import *
-
-def env_step(env, current_state, action, FLAGS): # skip k frames
-    frame_list = [current_state]
-    rew = 0
-    for i in range(FLAGS.skip_frame):
-        next_state, r_t, done, info = env.step(action)
-        rew += r_t
-        frame_list.append(next_state)
-        if done:
-            break
-    next_state = np.maximum.reduce(frame_list)
-    rew = np.sign(rew) # clip reward
-    return next_state, rew, done, info
-
-def e_greedy_execute(num_actions, eps, greedy_action):
-    action_probs = (1/num_actions)*eps*np.ones((num_actions,))
-    action_probs[tuple(greedy_action)] += 1-eps
-    a_t = np.random.choice(num_actions, 1, p = action_probs)[0]
-    return a_t
 
 def make_coeff(num_heads):
     arr = np.random.uniform(low=0.0, high=1.0, size=num_heads)
@@ -32,6 +14,12 @@ def make_coeff(num_heads):
 
 def show_process(FLAGS, episode_count ,rew_epi, global_avg_reward, best_reward, loss_epi, eps, learning_rate, step_count, step_start, 
                  time1, reward_his, step_his, mean_reward, exp_memory, loss_his, sess, saver):
+    if os.path.exists('results/'+str(FLAGS.arch)) == False:
+        os.makedirs('results/'+str(FLAGS.arch))
+        os.makedirs('tmp/'+str(FLAGS.arch))
+    
+    if loss_his == []:
+        loss_his = [0]
     
     if episode_count == 0:
         print('\nStart training '+ str(FLAGS.arch))
@@ -115,7 +103,7 @@ def reload_session(sess, saver, exp_memory, FLAGS):
     reward_his = np.load('./results/'+str(FLAGS.arch)+'/reward_his.npy').tolist()
     mean_reward = np.load('./results/'+str(FLAGS.arch)+'/mean_reward.npy').tolist() # mean_reward
     step_his = np.load('./results/'+str(FLAGS.arch)+'/step_his.npy').tolist()
-    step_start = np.load('./results/'+str(FLAGS.arch)+'/step_start.npy').tolist()[0]
+    step_start = np.load('./results/'+str(FLAGS.arch)+'/step_start.npy').tolist()
     step_count = step_his[-1]
     episode_count = len(loss_his)+1
     return exp_memory, loss_his, reward_his, step_count, mean_reward, episode_count, step_his, step_start, sess # step_start, 
