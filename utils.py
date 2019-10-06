@@ -6,18 +6,16 @@ import cv2
 import os
 import random
 from PIL import Image
-from gym.wrappers.atari_preprocessing import AtariPreprocessing
-from gym.wrappers.clip_reward import ClipReward
+from atari_env import set_atari_env
 
-def set_seed(seed_number, env):
+def make_atari_env(seed_number, env, life_terminate = False):
     os.environ['PYTHONHASHSEED']=str(seed_number)
     random.seed(seed_number)
     np.random.seed(seed_number)
     tf.set_random_seed(seed_number)
     env = gym.make(env)
     env.seed(seed_number)
-    env = AtariPreprocessing(env)
-    env = ClipReward(env, -1.0, 1.0)
+    env = set_atari_env(env, life_terminate)
     return env
 
 def get_session(): # use with get_session() as sess: or sess = get_session()
