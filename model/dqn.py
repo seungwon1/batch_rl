@@ -43,7 +43,6 @@ class DQN(object):
         
         max_q_target = batch_reward + self.gamma*(1-batch_done)*tar_gd_action # Compute Bellman update
         error = tf.stop_gradient(max_q_target) - online_est_q # block gradient from backpropagating to the target variable
-        
         loss = self.huber_loss(error, delta = 1.0)
         return loss
     
@@ -51,6 +50,5 @@ class DQN(object):
         # Use RMS prop, error clipping done in the paper
         lr = optim_args['lr']
         optimizer = tf.train.RMSPropOptimizer(lr, epsilon = 0.01, decay = 0.95, momentum = 0.95) 
-        clipped_error = tf.clip_by_value(loss, -1, 1)
-        train_step = optimizer.minimize(clipped_error)
+        train_step = optimizer.minimize(loss)
         return train_step

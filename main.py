@@ -5,6 +5,7 @@ import model
 import solver
 from utils import *
 from atari_env import *
+from atari_wrappers import *
 from tensorflow.python.platform import flags
 
 FLAGS = flags.FLAGS
@@ -75,4 +76,4 @@ def main():
     dqnsolver.train()
     
 if __name__ == "__main__":
-    main()   
+    main()
