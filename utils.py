@@ -7,7 +7,6 @@ import os
 import random
 from PIL import Image
 from atari_env import set_atari_env
-from atari_wrappers import *
 
 def atari_env(seed_number, env, life_terminate = True):
     os.environ['PYTHONHASHSEED']=str(seed_number)
@@ -16,7 +15,8 @@ def atari_env(seed_number, env, life_terminate = True):
     tf.set_random_seed(seed_number)
     env = gym.make(env)
     env.seed(seed_number)
-    env = set_atari_env(env, life_terminate)
+    #env = set_atari_env(env, life_terminate)
+    env = wrap_deepmind(env)
     return env
 
 def get_session(): # use with get_session() as sess: or sess = get_session()

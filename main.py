@@ -5,7 +5,6 @@ import model
 import solver
 from utils import *
 from atari_env import *
-from atari_wrappers import *
 from tensorflow.python.platform import flags
 
 FLAGS = flags.FLAGS
