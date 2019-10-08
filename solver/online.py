@@ -47,7 +47,7 @@ class DQNsolver(object):
         
     def eps_greedy(self, obs, eps):
         greedy_action = self.sess.run(self.on_gd_idx, feed_dict = {self.on_state:obs})
-        indicator = np.random.choice(2, 1, [eps, 1-eps])
+        indicator = np.random.choice(2, 1, p=[eps, 1-eps])
         if indicator == 1:
             a_t = greedy_action[0]
         else:
