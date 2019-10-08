@@ -15,8 +15,7 @@ def atari_env(seed_number, env, life_terminate = True):
     tf.set_random_seed(seed_number)
     env = gym.make(env)
     env.seed(seed_number)
-    #env = set_atari_env(env, life_terminate)
-    env = wrap_deepmind(env)
+    env = set_atari_env(env, life_terminate)
     return env
 
 def get_session(): # use with get_session() as sess: or sess = get_session()
