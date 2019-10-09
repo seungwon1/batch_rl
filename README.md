@@ -14,6 +14,7 @@ This repository contains tensorflow implementation for replicating the experimen
 - Matplotlib
 - OpenCV
 - Box2D 2.3.3
+- ffmpeg
 
 ## Online Performance
 Below command line replicates experiments done in the paper: DQN(Minh et al 2015), C51(Bellemare et al 2017), QR-DQN(Dabney et al 2017).
