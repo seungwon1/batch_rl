@@ -12,7 +12,7 @@ class DQNsolver(object):
     def __init__(self, env, sess, algo, FLAGS):
         self.env = env
         self.num_actions = env.action_space.n
-        self.sess = sess # get_session()
+        self.sess = sess 
         self.algo = algo 
         self.FLAGS = FLAGS
         self.exp_memory = ex_replay(memory_size = self.FLAGS.replay_size, batch_size = self.FLAGS.batch_size) # init ex memory
@@ -54,7 +54,7 @@ class DQNsolver(object):
             a_t = np.random.choice(self.num_actions, 1)[0]
         return a_t
       
-    def env_step(self, s_t, a_t, step_count): # execuate action and save trainsition
+    def env_step(self, s_t, a_t, step_count): # execute action and save trainsition
         next_state, r_t, done, info = self.env.step(a_t)
         self.exp_memory.save_ex(s_t, a_t, r_t, next_state, done, step_count = step_count) # a_t and r_t is int and float
         return next_state, r_t, done, info

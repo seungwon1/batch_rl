@@ -3,6 +3,7 @@ import tensorflow as tf
 from .dqn import DQN
 
 class QR_DQN(DQN):
+    """QR DQN(Dabney et al 2017) implementation"""
     def __init__(self, num_actions, lr = 0.00025, opt = 'adam', gamma = 0.99, arch = 'QR_DQN', num_heads=200):
         super(QR_DQN, self).__init__(num_actions, lr, opt, gamma, arch)
         self.num_heads = num_heads

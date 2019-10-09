@@ -3,7 +3,7 @@ import tensorflow as tf
 from .dqn import DQN
 
 class C51(DQN):
-    
+    """C51 DQN(Bellemare et al 2017) implementation"""
     def __init__(self, num_actions, lr = 0.00025, opt = 'adam', gamma = 0.99, arch = 'C51', vmax = 10.0, vmin = -10.0, num_heads=51, mini_batch=32):
         super(C51, self).__init__(num_actions, lr, opt, gamma, arch)
         self.vmax = vmax
