@@ -47,8 +47,10 @@ class DQN(object):
         return loss
     
     def dqn_optimizer(self, loss, optim_args):
-        # Use RMS prop, error clipping done in the paper
         lr = optim_args['lr']
-        optimizer = tf.train.RMSPropOptimizer(lr, epsilon = 0.01, decay = 0.95, momentum = 0.95) 
+        if self.opt=='rmsprop':
+            optimizer = tf.train.RMSPropOptimizer(lr, epsilon = 0.01, decay = 0.95, momentum = 0.95) 
+        elif self.opt=='adam':
+            optimizer = tf.train.AdamOptimizer(learning_rate= lr, epsilon=0.01/32) # self.lf ,# eps1e-4 for fast convergence, 0.01/32 for QR dqn
         train_step = optimizer.minimize(loss)
         return train_step
