@@ -23,7 +23,7 @@ python main.py --arch=DQN --eps=1.0 --final_eps=0.1 --max_frames=10000000 --opt=
 
 python main.py --arch=C51 --eps=1.0 --final_eps=0.05 --max_frames=10000000  --opt=adam --lr=0.00025 --num_heads=51 --game=PongNoFrameskip-v4
 
-python main.py --arch=QR_DQN --eps=1.0 --final_eps=0.01 --max_frames=10000000  --opt=adam --lr=0.000005 --num_heads=200 --game=PongNoFrameskip-v4
+python main.py --arch=QR_DQN --eps=1.0 --final_eps=0.01 --max_frames=10000000  --opt=adam --lr=0.00005 --num_heads=200 --game=PongNoFrameskip-v4
 ```
 Args
 ```
