@@ -59,23 +59,27 @@ class C51(DQN):
         return loss
     
     def categorical_algorithm(self, q_target, rew, done): # rew, done each of shape (32, ), q_target of shape (32, 51)
-        m0 = tf.zeros([self.mini_batch, self.num_heads], tf.float32)  # of shape (32, 51)
-        m1 = tf.ones([self.mini_batch, self.num_heads], tf.float32)  # of shape (32, 51)
-        for j in range(self.num_heads):
-            zj = tf.ones([self.mini_batch,], tf.float32) * (self.vmin + j*self.delta) # of shape (32,)
-            tzj_1 = (1-done) * (rew + self.gamma*zj) # of shape (32,)
-            tzj_2 = (done)*rew # of shape (32,)
-            tzj = tf.clip_by_value(tzj_1, self.vmin, self.vmax) + tf.clip_by_value(tzj_2, self.vmin, self.vmax) # of shape (32,)
-            bj = (tzj - self.vmin)/self.delta # of shape (32,)
-            l, u = tf.floor(bj), tf.ceil(bj)  # of shape (32,)
-            idx_l, idx_u = tf.cast(l, tf.int32), tf.cast(u, tf.int32) # for indexing
-            
-            ml = tf.reduce_sum(q_target*tf.one_hot(j*tf.ones([self.mini_batch,],tf.int32),self.num_heads, dtype=tf.float32), axis = 1)*(u-bj) # (32,)
-            mu = tf.reduce_sum(q_target*tf.one_hot(j*tf.ones([self.mini_batch,],tf.int32),self.num_heads, dtype=tf.float32), axis = 1)*(bj-l) # (32,)
-            
-            m0 += (m1 * tf.one_hot(idx_l, self.num_heads, dtype=tf.float32)) * tf.reshape(ml, [-1, 1]) # of shape (32, 51)
-            m0 += (m1 * tf.one_hot(idx_u, self.num_heads, dtype=tf.float32)) * tf.reshape(mu, [-1, 1]) # of shape (32, 51)
-        return m0
+        z = tf.expand_dims(tf.range(self.vmin, self.vmax+self.delta, self.delta, dtype=tf.float32), axis = 0) # of shape (1, 51)
+        tz = tf.expand_dims(rew, -1) + (1-tf.expand_dims(done,-1))*self.gamma*z # of shape (32, 51)
+        tz = tf.clip_by_value(tz, self.vmin, self.vmax) # clip value, of shape (32, 51)
+        b = (tz - self.vmin)/self.delta # of shape (32, 51)
+        l, u = tf.floor(b), tf.ceil(b) # each of shape (32, 51)
+         
+        q_target_ml = q_target * (u-b)
+        q_target_mu = q_target * (b-l)
+        
+        # vectorizing l,u, target(prob) to (mini_batch, num_heads, num_heads).
+        l_vec = tf.transpose(tf.expand_dims(l, -1) * tf.ones([self.mini_batch, self.num_heads, self.num_heads]), perm = [0, 2, 1]) # (32, 51, 51) 
+        u_vec = tf.transpose(tf.expand_dims(u, -1) * tf.ones([self.mini_batch, self.num_heads, self.num_heads]), perm = [0, 2, 1]) # (32, 51, 51) 
+        qtarget_vec_ml = tf.transpose(tf.expand_dims(q_target_ml,-1)* tf.ones([self.mini_batch, self.num_heads, self.num_heads]), perm = [0,2,1]) 
+        qtarget_vec_mu = tf.transpose(tf.expand_dims(q_target_mu,-1)* tf.ones([self.mini_batch, self.num_heads, self.num_heads]), perm = [0,2,1]) 
+        idx_arr = tf.expand_dims(tf.expand_dims(tf.range(self.num_heads, dtype=tf.float32), 0), -1) #  of shape (1, 51, 1)
+        
+        # Compute projected probability matrix
+        prob_ml = tf.reduce_sum(qtarget_vec_ml * tf.cast(tf.equal(l_vec, idx_arr), tf.float32), axis = 2) # (32, 51)
+        prob_mu = tf.reduce_sum(qtarget_vec_mu * tf.cast(tf.equal(u_vec, idx_arr), tf.float32), axis = 2) # (32, 51)
+        m = prob_ml + prob_mu # (32, 51)
+        return m
     
     # define optimizer
     def dqn_optimizer(self, loss, optim_args):
