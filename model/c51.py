@@ -39,7 +39,7 @@ class C51(DQN):
             action_mask = tf.reshape(tf.one_hot(act, self.num_actions, dtype='float32'), [-1, self.num_actions, 1]) #of shape (N, num_act,1)
             greedy_action_mask = tf.reshape(tf.one_hot(greedy_idx, self.num_actions, dtype='float32'), [-1, self.num_actions, 1]) # (N, num_act, 1)
             
-            est_q = out_softmax * action_mask # of shape (N, num_actions, num_heads)
+            est_q = out * action_mask
             est_q = tf.reduce_sum(est_q, axis = 1)  # of shape (N, num_heads) # probability distribution of Q(s,a)
             
             greedy_action = out_softmax * greedy_action_mask
@@ -54,10 +54,12 @@ class C51(DQN):
         batch_done = target_args['batch_done']
         tar_gd_action = target_args['gd_action_value']
         
-        project_prob = self.categorical_algorithm(tar_gd_action, batch_reward, batch_done)
-        loss = tf.reduce_mean(-tf.reduce_sum(tf.stop_gradient(project_prob) * tf.log(online_est_q+1e-10), axis = 1))
+        project_prob = self.categorical_algorithm(tf.stop_gradient(tar_gd_action), batch_reward, batch_done)
+        loss = tf.nn.softmax_cross_entropy_with_logits_v2(labels=project_prob, logits=online_est_q) 
+        loss = tf.reduce_mean(loss)
         return loss
     
+    # Categorical algorithm
     def categorical_algorithm(self, q_target, rew, done): # rew, done each of shape (32, ), q_target of shape (32, 51)
         z = tf.expand_dims(tf.range(self.vmin, self.vmax+self.delta, self.delta, dtype=tf.float32), axis = 0) # of shape (1, 51)
         tz = tf.expand_dims(rew, -1) + (1-tf.expand_dims(done,-1))*self.gamma*z # of shape (32, 51)
@@ -80,10 +82,5 @@ class C51(DQN):
         prob_mu = tf.reduce_sum(qtarget_vec_mu * tf.cast(tf.equal(u_vec, idx_arr), tf.float32), axis = 2) # (32, 51)
         m = prob_ml + prob_mu # (32, 51)
         return m
-    
-    # define optimizer
-    def dqn_optimizer(self, loss, optim_args):
-        lr = optim_args['lr']
-        optimizer = tf.train.AdamOptimizer(learning_rate= lr, epsilon=0.01/32) # self.lf ,# eps1e-4 for fast convergence, 0.01/32 for QR dqn
-        return optimizer.minimize(loss)
+
     

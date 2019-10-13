@@ -56,9 +56,3 @@ class QR_DQN(DQN):
         loss = tf.abs(quentiles - indicator) * self.huber_loss(u, delta) # (N, H, H) #  tf.stop_gradient(indicator)
         loss = tf.reduce_mean(tf.reduce_sum(tf.reduce_mean(loss, axis = 2), axis = 1)) 
         return loss
-
-    # define optimizer
-    def dqn_optimizer(self, loss, optim_args):
-        lr = optim_args['lr']
-        optimizer = tf.train.AdamOptimizer(learning_rate= lr, epsilon=0.01/32) # self.lf ,# eps1e-4 for fast convergence, 0.01/32 for QR dqn
-        return optimizer.minimize(loss)
