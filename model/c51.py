@@ -55,7 +55,7 @@ class C51(DQN):
         tar_gd_action = target_args['gd_action_value']
         
         project_prob = self.categorical_algorithm(tf.stop_gradient(tar_gd_action), batch_reward, batch_done)
-        loss = tf.nn.softmax_cross_entropy_with_logits_v2(labels=project_prob, logits=online_est_q) 
+        loss = tf.nn.softmax_cross_entropy_with_logits_v2(labels=project_prob, logits=online_est_q)
         loss = tf.reduce_mean(loss)
         return loss
     
@@ -67,7 +67,7 @@ class C51(DQN):
         b = (tz - self.vmin)/self.delta # of shape (32, 51)
         l, u = tf.floor(b), tf.ceil(b) # each of shape (32, 51)
          
-        q_target_ml = q_target * (u-b)
+        q_target_ml = q_target * (u-b+tf.cast(tf.equal(b, u), tf.float32))
         q_target_mu = q_target * (b-l)
         
         # vectorizing l,u, target(prob) to (mini_batch, num_heads, num_heads).
@@ -82,5 +82,3 @@ class C51(DQN):
         prob_mu = tf.reduce_sum(qtarget_vec_mu * tf.cast(tf.equal(u_vec, idx_arr), tf.float32), axis = 2) # (32, 51)
         m = prob_ml + prob_mu # (32, 51)
         return m
-
-    
