@@ -1,10 +1,15 @@
 # Batch_RL
 
-This repository contains tensorflow implementation for replicating the experiments described in the paper ["Striving for Simplicity in Off-policy Deep Reinforcement Learning"]( https://arxiv.org/abs/1907.04543)
+Tensorflow implementation for replicating the experiments described in the paper ["Striving for Simplicity in Off-policy Deep Reinforcement Learning"]( https://arxiv.org/abs/1907.04543). This repository aims to implement all variants of DQN used in the paper in pure tensorflow from scratch, whereas code provided by author used dopamine framework. The implementation contains:
+
+[1] Classic DQN: [Human-level control through deep reinforcement learning](https://www.nature.com/articles/nature14236)  
+[2] C51: [A Distributional Perspective on Reinforcement Learning](https://arxiv.org/pdf/1707.06887.pdf)  
+[3] QR DQN: [Distributional Reinforcement Learning with Quantile Regression](https://arxiv.org/pdf/1710.10044.pdf)  
+[4] Ensemble DQN: [Striving for Simplicity in Off-policy Deep Reinforcement Learning](https://arxiv.org/abs/1907.04543)  
+[5] Random Ensemble Mixture(REM) DQN: [Striving for Simplicity in Off-policy Deep Reinforcement Learning](https://arxiv.org/abs/1907.04543)  
 
 ## Paper Review
-- Blog: https://medium.com/@seungwonkim_57156/deep-learning-papers-review-striving-for-simplicity-in-off-policy-deep-reinforcement-learning-ac49c4aa26e2
-- Pdf: https://github.com/seungwon1/batch_rl/blob/master/docs/paper_review.pdf
+- [Blog](https://medium.com/@seungwonkim_57156/deep-learning-papers-review-striving-for-simplicity-in-off-policy-deep-reinforcement-learning-ac49c4aa26e2), [Pdf](https://github.com/seungwon1/batch_rl/blob/master/docs/paper_review.pdf)
 
 ## Dependencies
 - Python 3.6 or greater
@@ -17,7 +22,7 @@ This repository contains tensorflow implementation for replicating the experimen
 - ffmpeg
 
 ## Online Performance
-Below command line replicates experiments done in the paper: DQN(Minh et al 2015), C51(Bellemare et al 2017), QR-DQN(Dabney et al 2017).
+Below command line replicates experiments done in the paper: DQN [[1]](#batch_rl), C51 [[2]](#batch_rl), QR DQN [[3]](#batch_rl).
 ```
 python main.py --arch=DQN --eps=1.0 --final_eps=0.1 --max_frames=10000000 --opt=rmsprop --lr=0.00025 --game=PongNoFrameskip-v4
 
@@ -37,7 +42,11 @@ Args
 -game : Atari game env
 ```
 - Other hyperparameters are the same as those in the paper (see main.py).
-- Sanity Check to ensure that each DQN algorithm(DQN, C51, QR_DQN) works well(Test env: PongNoFrameskip-v4)
+
 
 ## Offline Performance
 - In progress
+
+## Reference
+- [Deepmind's code](https://sites.google.com/a/deepmind.com/dqn/)  
+- [CS294 HW3](https://github.com/berkeleydeeprlcourse/homework/tree/master/hw3)
