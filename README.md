@@ -3,8 +3,8 @@
 Tensorflow implementation for replicating the experiments described in the paper ["Striving for Simplicity in Off-policy Deep Reinforcement Learning"]( https://arxiv.org/abs/1907.04543). This repository aims to implement all variants of DQN used in the paper in pure tensorflow from scratch, whereas code provided by author used dopamine framework. The implementation contains:
 
 [1] Classic DQN: [Human-level control through deep reinforcement learning](https://www.nature.com/articles/nature14236)  
-[2] C51: [A Distributional Perspective on Reinforcement Learning](https://arxiv.org/pdf/1707.06887.pdf)  
-[3] QR DQN: [Distributional Reinforcement Learning with Quantile Regression](https://arxiv.org/pdf/1710.10044.pdf)  
+[2] C51: [A Distributional Perspective on Reinforcement Learning](https://arxiv.org/abs/1707.06887)  
+[3] QR DQN: [Distributional Reinforcement Learning with Quantile Regression](https://arxiv.org/abs/1710.10044)  
 [4] Ensemble DQN: [Striving for Simplicity in Off-policy Deep Reinforcement Learning](https://arxiv.org/abs/1907.04543)  
 [5] Random Ensemble Mixture(REM) DQN: [Striving for Simplicity in Off-policy Deep Reinforcement Learning](https://arxiv.org/abs/1907.04543)  
 
@@ -42,7 +42,6 @@ Args
 -game : Atari game env
 ```
 - Other hyperparameters are the same as those in the paper (see main.py).
-
 
 ## Offline Performance
 - In progress
