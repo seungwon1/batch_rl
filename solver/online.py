@@ -95,7 +95,7 @@ class DQNsolver(object):
         saver = tf.train.Saver()
         # reload variable evaluate agent
         if self.FLAGS.reload or self.FLAGS.evaluate:
-            self.exp_memory, loss_his, reward_his, step_count, mean_reward, episode_count, step_his, step_start, self.sess = reload_session(self.sess, saver, exp_memory, self.FLAGS)
+            self.exp_memory, loss_his, reward_his, step_count, mean_reward, episode_count, step_his, step_start, self.sess = reload_session(self.sess, saver, self.exp_memory, self.FLAGS)
             
             # evaluate agent
             if self.FLAGS.evaluate:
