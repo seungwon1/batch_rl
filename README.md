@@ -54,7 +54,7 @@ Args
 - For each figure, the same hyperparameter is used for all DQNs.
 - Note that 1 frame in the x-axis includes 4 step counts.
 - Linearly decaying epsilon from 1 to 0.1(left), 0.05(middle), 0.01(right) over the first 1M frames.
-- C51 is able to reach the best score but seems to learn optimal policy a bit slower than classic(Nature) DQN does, which is different from the results in [[2]](#batch_rl) and [[3]](#batch_rl). This might be mitigated by using different epsilon decaying schedule(e.g., exponential decay) or using different target update interval, seed, etc.
+- C51 is able to reach the best score but seems to learn optimal policy a bit slower than classic(Nature) DQN does, which is different from the results in [[2]](#batch_rl) and [[3]](#batch_rl). (Additional experiments in progress)
 
 <p align="center">
 <img src="https://github.com/seungwon1/batch_rl/blob/master/figure/n_dqn_l.png" width="250">
