@@ -39,7 +39,7 @@ class C51(DQN):
             action_mask = tf.reshape(tf.one_hot(act, self.num_actions, dtype='float32'), [-1, self.num_actions, 1]) #of shape (N, num_act,1)
             greedy_action_mask = tf.reshape(tf.one_hot(greedy_idx, self.num_actions, dtype='float32'), [-1, self.num_actions, 1]) # (N, num_act, 1)
             
-            est_q = out * action_mask
+            est_q = out_softmax * action_mask
             est_q = tf.reduce_sum(est_q, axis = 1)  # of shape (N, num_heads) # probability distribution of Q(s,a)
             
             greedy_action = out_softmax * greedy_action_mask
@@ -55,8 +55,7 @@ class C51(DQN):
         tar_gd_action = target_args['gd_action_value']
         
         project_prob = self.categorical_algorithm(tf.stop_gradient(tar_gd_action), batch_reward, batch_done)
-        loss = tf.nn.softmax_cross_entropy_with_logits_v2(labels=project_prob, logits=online_est_q)
-        loss = tf.reduce_mean(loss)
+        loss = tf.reduce_mean(-tf.reduce_sum(project_prob * tf.log(online_est_q+1e-7), axis = 1))
         return loss
     
     # Categorical algorithm
@@ -67,7 +66,7 @@ class C51(DQN):
         b = (tz - self.vmin)/self.delta # of shape (32, 51)
         l, u = tf.floor(b), tf.ceil(b) # each of shape (32, 51)
          
-        q_target_ml = q_target * (u-b+tf.cast(tf.equal(b, u), tf.float32))
+        q_target_ml = q_target * (u-b) # +tf.cast(tf.equal(b, u), tf.float32))
         q_target_mu = q_target * (b-l)
         
         # vectorizing l,u, target(prob) to (mini_batch, num_heads, num_heads).
