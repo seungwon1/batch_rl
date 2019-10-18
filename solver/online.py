@@ -56,7 +56,7 @@ class DQNsolver(object):
       
     def env_step(self, s_t, a_t, step_count): # execute action and save trainsition
         next_state, r_t, done, info = self.env.step(a_t)
-        self.exp_memory.save_ex(s_t, a_t, r_t, next_state, done, step_count = step_count) # a_t and r_t is int and float
+        self.exp_memory.save_ex(s_t, a_t, np.sign(r_t), next_state, done, step_count = step_count) # a_t and r_t is int and float
         return next_state, r_t, done, info
         
     def perform_gd(self, step_count): # perform gradient descent
@@ -105,12 +105,15 @@ class DQNsolver(object):
         
         # train DQN
         while step_count < self.FLAGS.max_frames:
-            rew_epi, loss_epi = 0, 0
             done = False
             step_start = step_count
             s_t = self.env.reset()
-            if step_count == 0: # save the first frame in the first step.
+            if step_count == 0: # save the first frame in the first step, assign max_lives
                 self.exp_memory.save_ex(s_t, None, None, None, None, step_count = step_count)
+                max_lives = self.env.unwrapped.ale.lives()
+                
+            if self.env.unwrapped.ale.lives() == max_lives: # accumulate rewards until agent lost all lives
+                rew_epi, loss_epi = 0, 0
                 
             while done == False: # continue to step until an episode terminates
                 # compute forward pass to find greedy action and select action with epsilon greedy strategy
@@ -130,26 +133,29 @@ class DQNsolver(object):
                 
                 # etc (decaying epsilon, acculates loss, rewards, increase step count and episode count)
                 eps = linear_decay(step_count, start =self.FLAGS.eps, end = self.FLAGS.final_eps, frame = 1000000)
+                
                 if loss is not None:
                     loss_epi += loss
                 rew_epi += r_t
                 step_count += 1
-            episode_count += 1
+                
+            if self.env.unwrapped.ale.lives() == 0:
+                episode_count += 1
+                
+                """For saving and printing results of experiments"""
+                # save loss, reward per an episode, compute average reward on previous 100 number of episodes
+                if loss_epi != 0:
+                    loss_his.append(loss_epi/(step_count-step_start))
+                reward_his.append(rew_epi)
+                step_his.append(step_count)
+                global_avg_reward = np.mean(reward_his[-100:])
+                mean_reward.append(global_avg_reward)
+                best_reward = np.max(mean_reward)
             
-            """For saving and printing results of experiments"""
-            # save loss, reward per an episode, compute average reward on previous 100 number of episodes
-            if loss_epi != 0:
-                loss_his.append(loss_epi/(step_count-step_start))
-            reward_his.append(rew_epi)
-            step_his.append(step_count)
-            global_avg_reward = np.mean(reward_his[-100:])
-            mean_reward.append(global_avg_reward)
-            best_reward = np.max(mean_reward)
-            
-            # print progress if verbose is True, save records
-            if self.FLAGS.verbose:
-                show_process(self.FLAGS, episode_count-1 ,rew_epi, global_avg_reward, best_reward, loss_epi, eps,
-                             learning_rate, step_count, step_start, time1, reward_his, step_his, mean_reward, self.exp_memory, 
-                             loss_his, self.sess, saver)
-            """For saving and printing results of experiments"""
+                # print progress if verbose is True, save records
+                if self.FLAGS.verbose:
+                    show_process(self.FLAGS, episode_count-1 ,rew_epi, global_avg_reward, best_reward, loss_epi, eps,
+                                 learning_rate, step_count, step_start, time1, reward_his, step_his, mean_reward, self.exp_memory, 
+                                 loss_his, self.sess, saver)
+                """For saving and printing results of experiments"""
             
