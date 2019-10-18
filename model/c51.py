@@ -26,36 +26,40 @@ class C51(DQN):
                 fc1 = tf.contrib.layers.fully_connected(conv3_flatten, 512)
                 out = tf.contrib.layers.fully_connected(fc1, self.num_actions * self.num_heads, activation_fn=None) # of shape (N,num_ac*num*heads)
             
-            out = tf.reshape(out, (tf.shape(out)[0], self.num_actions, self.num_heads)) # of shape (N, num_actions, num_heads)
-            out_softmax = tf.nn.softmax(out, axis = 2) # apply softmax, of shape (N, num_actions, num_heads)
+        out = tf.reshape(out, (tf.shape(out)[0], self.num_actions, self.num_heads)) # of shape (N, num_actions, num_heads)
+        out_softmax = tf.nn.softmax(out, axis = 2) # apply softmax, of shape (N, num_actions, num_heads)
 
-            support_atoms = tf.reshape(tf.range(self.vmin, self.vmax+self.delta, self.delta, dtype=tf.float64), [-1, 1]) 
-            support_atoms = tf.cast(support_atoms, tf.float32) # support atoms 'value' zi, shape (num_heads, 1)
+        support_atoms = tf.reshape(tf.range(self.vmin, self.vmax+self.delta, self.delta, dtype=tf.float64), [-1, 1]) 
+        support_atoms = tf.cast(support_atoms, tf.float32) # support atoms 'value' zi, shape (num_heads, 1)
             
-            mean_qsa = tf.reshape(out_softmax, [-1, self.num_heads]) # of shape (N*num_actions, num_heads)
-            mean_qsa = tf.reshape(tf.matmul(mean_qsa, support_atoms), [-1, self.num_actions]) # of shape (N*num_actions, 1) to (N, num_actions)
-            greedy_idx = tf.argmax(mean_qsa, axis = 1) # of shape (N, )
+        mean_qsa = tf.reshape(out_softmax, [-1, self.num_heads]) # of shape (N*num_actions, num_heads)
+        mean_qsa = tf.reshape(tf.matmul(mean_qsa, support_atoms), [-1, self.num_actions]) # of shape (N*num_actions, 1) to (N, num_actions)
+        greedy_idx = tf.argmax(mean_qsa, axis = 1) # of shape (N, )
             
-            action_mask = tf.reshape(tf.one_hot(act, self.num_actions, dtype='float32'), [-1, self.num_actions, 1]) #of shape (N, num_act,1)
-            greedy_action_mask = tf.reshape(tf.one_hot(greedy_idx, self.num_actions, dtype='float32'), [-1, self.num_actions, 1]) # (N, num_act, 1)
+        action_mask = tf.reshape(tf.one_hot(act, self.num_actions, dtype='float32'), [-1, self.num_actions, 1]) #of shape (N, num_act,1)
+        greedy_action_mask = tf.reshape(tf.one_hot(greedy_idx, self.num_actions, dtype='float32'), [-1, self.num_actions, 1]) # (N, num_act, 1)
             
-            est_q = out_softmax * action_mask
-            est_q = tf.reduce_sum(est_q, axis = 1)  # of shape (N, num_heads) # probability distribution of Q(s,a)
+        #est_q = out_softmax * action_mask
+        est_q = out * action_mask
+        est_q = tf.reduce_sum(est_q, axis = 1)  # of shape (N, num_heads) # probability distribution of Q(s,a)
             
-            greedy_action = out_softmax * greedy_action_mask
-            greedy_action = tf.reduce_sum(greedy_action, axis = 1)
+        greedy_action = out_softmax * greedy_action_mask
+        greedy_action = tf.reduce_sum(greedy_action, axis = 1)
             
         return est_q, greedy_idx, greedy_action
         
     # Define loss function
     def loss_fn(self, online_est_q, target_args): 
-        # Loss function is cross-entropy loss, project_prob is distribution after Bellman update
         batch_reward = target_args['batch_rew']
         batch_done = target_args['batch_done']
         tar_gd_action = target_args['gd_action_value']
         
-        project_prob = self.categorical_algorithm(tf.stop_gradient(tar_gd_action), batch_reward, batch_done)
-        loss = tf.reduce_mean(-tf.reduce_sum(project_prob * tf.log(online_est_q+1e-7), axis = 1))
+        #project_prob = self.categorical_algorithm(tf.stop_gradient(tar_gd_action), batch_reward, batch_done)
+        # project_prob = self.categorical_algorithm(tar_gd_action, batch_reward, batch_done) # tf.stop_gradient
+        project_prob = self.categorical_algorithm(tar_gd_action, batch_reward, batch_done)
+        #loss = tf.reduce_mean(-tf.reduce_sum(project_prob * tf.log(online_est_q), axis = 1))
+        loss = tf.nn.softmax_cross_entropy_with_logits_v2(labels=tf.stop_gradient(project_prob), logits=online_est_q)
+        loss = tf.reduce_mean(loss)
         return loss
     
     # Categorical algorithm
@@ -66,7 +70,7 @@ class C51(DQN):
         b = (tz - self.vmin)/self.delta # of shape (32, 51)
         l, u = tf.floor(b), tf.ceil(b) # each of shape (32, 51)
          
-        q_target_ml = q_target * (u-b) # +tf.cast(tf.equal(b, u), tf.float32))
+        q_target_ml = q_target * (u-b +tf.cast(tf.equal(b, u), tf.float32))
         q_target_mu = q_target * (b-l)
         
         # vectorizing l,u, target(prob) to (mini_batch, num_heads, num_heads).
