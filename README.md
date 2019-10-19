@@ -70,8 +70,8 @@ Args
 </p>
 
 - Left: C51, DQN in environmental setup [[2]](#batch_rl), Center: C51, DQN in environmental setup [[3]](#batch_rl)
-- Right: Average reward of 100 previous episode on Breakout in environmental setup [[3]](#batch_rl).
-- Here RMS prop is used for DQN(left, center). For breakout(right), all hyperparameters as well as environmental setup are the same as [[3]](#batch_rl).
+- Right: Average reward of 100 previous episode on Breakout in environmental setup [[2]](#batch_rl).
+- Here RMS prop is used for DQN(left, center). For breakout(right), all hyperparameters as well as environmental setup are the same as [[2]](#batch_rl).
 
 ## Offline Performance
 - In progress
