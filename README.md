@@ -43,18 +43,12 @@ Args
 ```
 - Other hyperparameters are the same as those in the paper (see main.py).
 
-#### Results: online performance on PongNoFrameskip-v4 env.
+#### Results: online performance on PongNoFrameskip-v4 and BreakoutNoFrameskip-v4.
 <p align="center">
 <img src="https://github.com/seungwon1/batch_rl/blob/master/figure/n_dqn_p.png" width="250">
 <img src="https://github.com/seungwon1/batch_rl/blob/master/figure/c51_p.png" width="250">
 <img src="https://github.com/seungwon1/batch_rl/blob/master/figure/qr_dqn_p.png" width="250">
 </p>
-
-- Average reward of 100 previous episode, Left: DQN [[1]](#batch_rl), Middle: C51, DQN [[2]](#batch_rl), Right: QR DQN, C51, DQN [[3]](#batch_rl)
-- For each figure, the same hyperparameter is used for all DQNs.
-- Note that 1 frame in the x-axis includes 4 step counts.
-- Linearly decaying epsilon from 1 to 0.1(left), 0.05(middle), 0.01(right) over the first 1M frames.
-- C51 is able to reach the best score but seems to learn optimal policy a bit slower than classic(Nature) DQN does, which is different from the results in [[2]](#batch_rl) and [[3]](#batch_rl). (Additional experiments in progress)
 
 <p align="center">
 <img src="https://github.com/seungwon1/batch_rl/blob/master/figure/n_dqn_l.png" width="250">
@@ -62,7 +56,22 @@ Args
 <img src="https://github.com/seungwon1/batch_rl/blob/master/figure/qr_dqn_l.png" width="250">
 </p>
 
+- Average reward of 100 previous episode on Pong, Left: DQN [[1]](#batch_rl), Middle: C51, DQN [[2]](#batch_rl), Right: QR DQN, C51, DQN [[3]](#batch_rl)
 - Average Loss(per episode), Left: DQN [[1]](#batch_rl), Middle: C51, DQN [[2]](#batch_rl), Right: QR DQN, C51, DQN [[3]](#batch_rl)
+- For each figure, the same hyperparameters are used for all DQNs.
+- Note that 1 frame in the x-axis includes 4 step counts.
+- Linearly decaying epsilon from 1 to 0.1(left), 0.05(middle), 0.01(right) over the first 1M frames.
+- C51 is able to reach the best score but seems to learn optimal policy a bit slower than classic(Nature) DQN does, which is different from the results in [[2]](#batch_rl) and [[3]](#batch_rl). This is because Pong has relatively simple dynamics than other complex atari environments and the same hyperparameters as well as optimizer are used for each experiment. It can be mitigated by using different optimizer for each algorithm but the same value of hyperparameters or measuring performance on the more complex environment such as Breakout (See below).
+
+<p align="center">
+<img src="https://github.com/seungwon1/batch_rl/blob/master/figure/c51_p2.png" width="240">
+<img src="https://github.com/seungwon1/batch_rl/blob/master/figure/qr_dqn_p2.png" width="240">
+<img src="https://github.com/seungwon1/batch_rl/blob/master/figure/breakout.png" width="240">
+</p>
+
+- Left: C51, DQN in environmental setup [[2]](#batch_rl), Center: C51, DQN in environmental setup [[3]](#batch_rl)
+- Here RMS prop is used for DQN for each experiment.
+- Right: Average reward of 100 previous episode on Breakout.
 
 ## Offline Performance
 - In progress
