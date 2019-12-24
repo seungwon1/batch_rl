@@ -4,6 +4,7 @@ import gym
 import cv2
 import random
 from collections import deque
+
 # reference: https://github.com/berkeleydeeprlcourse/homework/blob/master/hw3/atari_wrappers.py
 
 class random_start_env(gym.Wrapper):
@@ -47,7 +48,7 @@ class preprocess_clip_env(gym.Wrapper):
         
     def step(self, action):
         obs, reward, done, info = self.env.step(action)
-        return self.preprocess(obs), np.sign(reward), done, info     
+        return self.preprocess(obs), reward, done, info     
     
     def reset(self):
         return self.preprocess(self.env.reset())    
@@ -58,11 +59,10 @@ class preprocess_clip_env(gym.Wrapper):
         resized_input = cv2.resize(rgb2y.reshape(210, 160), (84, 84)) # resize with bilinear interpolation (default)
         resized_input = resized_input.astype(np.uint8) # convert to 0-255 scale
         return resized_input # output of shape (84,84)    
+    
 
 class life_termination(gym.Wrapper):
     def __init__(self, env):
-        "Terminate episode when the agent lost life"
-        "Reset on true game over"
         super().__init__(env)
         self.lives = 0
         self.true_game_over = True
@@ -88,10 +88,9 @@ class life_termination(gym.Wrapper):
             
         self.lives = self.env.unwrapped.ale.lives()
         return obs
-        
+    
 class FireResetEnv(gym.Wrapper):
     def __init__(self, env=None):
-        """Take action on reset for environments that are fixed until firing."""
         super(FireResetEnv, self).__init__(env)
         assert env.unwrapped.get_action_meanings()[1] == 'FIRE'
         assert len(env.unwrapped.get_action_meanings()) >= 3

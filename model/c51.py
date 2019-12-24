@@ -24,28 +24,26 @@ class C51(DQN):
 
             with tf.variable_scope('fc'):
                 fc1 = tf.contrib.layers.fully_connected(conv3_flatten, 512)
-                out = tf.contrib.layers.fully_connected(fc1, self.num_actions * self.num_heads, activation_fn=None) # of shape (N,num_ac*num*heads)
+                out = tf.contrib.layers.fully_connected(fc1, self.num_actions * self.num_heads, activation_fn=None)
             
-        out = tf.reshape(out, (tf.shape(out)[0], self.num_actions, self.num_heads)) # of shape (N, num_actions, num_heads)
-        out_softmax = tf.nn.softmax(out, axis = 2) # apply softmax, of shape (N, num_actions, num_heads)
+        out = tf.reshape(out, (tf.shape(out)[0], self.num_actions, self.num_heads))
+        out_softmax = tf.nn.softmax(out, axis = 2)
 
         support_atoms = tf.reshape(tf.range(self.vmin, self.vmax+self.delta, self.delta, dtype=tf.float64), [-1, 1]) 
-        support_atoms = tf.cast(support_atoms, tf.float32) # support atoms 'value' zi, shape (num_heads, 1)
+        support_atoms = tf.cast(support_atoms, tf.float32)
             
-        mean_qsa = tf.reshape(out_softmax, [-1, self.num_heads]) # of shape (N*num_actions, num_heads)
-        mean_qsa = tf.reshape(tf.matmul(mean_qsa, support_atoms), [-1, self.num_actions]) # of shape (N*num_actions, 1) to (N, num_actions)
-        greedy_idx = tf.argmax(mean_qsa, axis = 1) # of shape (N, )
+        mean_qsa = tf.reshape(out_softmax, [-1, self.num_heads])
+        mean_qsa = tf.reshape(tf.matmul(mean_qsa, support_atoms), [-1, self.num_actions]) 
+        greedy_idx = tf.argmax(mean_qsa, axis = 1)
             
-        action_mask = tf.reshape(tf.one_hot(act, self.num_actions, dtype='float32'), [-1, self.num_actions, 1]) #of shape (N, num_act,1)
-        greedy_action_mask = tf.reshape(tf.one_hot(greedy_idx, self.num_actions, dtype='float32'), [-1, self.num_actions, 1]) # (N, num_act, 1)
+        action_mask = tf.reshape(tf.one_hot(act, self.num_actions, dtype='float32'), [-1, self.num_actions, 1])
+        greedy_action_mask = tf.reshape(tf.one_hot(greedy_idx, self.num_actions, dtype='float32'), [-1, self.num_actions, 1])
             
-        #est_q = out_softmax * action_mask
         est_q = out * action_mask
-        est_q = tf.reduce_sum(est_q, axis = 1)  # of shape (N, num_heads) # probability distribution of Q(s,a)
+        est_q = tf.reduce_sum(est_q, axis = 1)
             
         greedy_action = out_softmax * greedy_action_mask
         greedy_action = tf.reduce_sum(greedy_action, axis = 1)
-            
         return est_q, greedy_idx, greedy_action
         
     # Define loss function
@@ -54,34 +52,30 @@ class C51(DQN):
         batch_done = target_args['batch_done']
         tar_gd_action = target_args['gd_action_value']
         
-        #project_prob = self.categorical_algorithm(tf.stop_gradient(tar_gd_action), batch_reward, batch_done)
-        # project_prob = self.categorical_algorithm(tar_gd_action, batch_reward, batch_done) # tf.stop_gradient
         project_prob = self.categorical_algorithm(tar_gd_action, batch_reward, batch_done)
-        #loss = tf.reduce_mean(-tf.reduce_sum(project_prob * tf.log(online_est_q), axis = 1))
-        loss = tf.nn.softmax_cross_entropy_with_logits_v2(labels=tf.stop_gradient(project_prob), logits=online_est_q)
-        loss = tf.reduce_mean(loss)
+        loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(labels=tf.stop_gradient(project_prob), logits=online_est_q))
         return loss
     
     # Categorical algorithm
-    def categorical_algorithm(self, q_target, rew, done): # rew, done each of shape (32, ), q_target of shape (32, 51)
-        z = tf.expand_dims(tf.range(self.vmin, self.vmax+self.delta, self.delta, dtype=tf.float32), axis = 0) # of shape (1, 51)
-        tz = tf.expand_dims(rew, -1) + (1-tf.expand_dims(done,-1))*self.gamma*z # of shape (32, 51)
-        tz = tf.clip_by_value(tz, self.vmin, self.vmax) # clip value, of shape (32, 51)
-        b = (tz - self.vmin)/self.delta # of shape (32, 51)
-        l, u = tf.floor(b), tf.ceil(b) # each of shape (32, 51)
+    def categorical_algorithm(self, q_target, rew, done): 
+        z = tf.expand_dims(tf.range(self.vmin, self.vmax+self.delta, self.delta, dtype=tf.float32), axis = 0)
+        tz = tf.expand_dims(rew, -1) + (1-tf.expand_dims(done,-1))*self.gamma*z 
+        tz = tf.clip_by_value(tz, self.vmin, self.vmax)
+        b = (tz - self.vmin)/self.delta
+        l, u = tf.floor(b), tf.ceil(b)
          
         q_target_ml = q_target * (u-b +tf.cast(tf.equal(b, u), tf.float32))
         q_target_mu = q_target * (b-l)
         
         # vectorizing l,u, target(prob) to (mini_batch, num_heads, num_heads).
-        l_vec = tf.transpose(tf.expand_dims(l, -1) * tf.ones([self.mini_batch, self.num_heads, self.num_heads]), perm = [0, 2, 1]) # (32, 51, 51) 
-        u_vec = tf.transpose(tf.expand_dims(u, -1) * tf.ones([self.mini_batch, self.num_heads, self.num_heads]), perm = [0, 2, 1]) # (32, 51, 51) 
+        l_vec = tf.transpose(tf.expand_dims(l, -1) * tf.ones([self.mini_batch, self.num_heads, self.num_heads]), perm = [0, 2, 1]) 
+        u_vec = tf.transpose(tf.expand_dims(u, -1) * tf.ones([self.mini_batch, self.num_heads, self.num_heads]), perm = [0, 2, 1])
         qtarget_vec_ml = tf.transpose(tf.expand_dims(q_target_ml,-1)* tf.ones([self.mini_batch, self.num_heads, self.num_heads]), perm = [0,2,1]) 
         qtarget_vec_mu = tf.transpose(tf.expand_dims(q_target_mu,-1)* tf.ones([self.mini_batch, self.num_heads, self.num_heads]), perm = [0,2,1]) 
-        idx_arr = tf.expand_dims(tf.expand_dims(tf.range(self.num_heads, dtype=tf.float32), 0), -1) #  of shape (1, 51, 1)
+        idx_arr = tf.expand_dims(tf.expand_dims(tf.range(self.num_heads, dtype=tf.float32), 0), -1)
         
         # Compute projected probability matrix
-        prob_ml = tf.reduce_sum(qtarget_vec_ml * tf.cast(tf.equal(l_vec, idx_arr), tf.float32), axis = 2) # (32, 51)
-        prob_mu = tf.reduce_sum(qtarget_vec_mu * tf.cast(tf.equal(u_vec, idx_arr), tf.float32), axis = 2) # (32, 51)
-        m = prob_ml + prob_mu # (32, 51)
+        prob_ml = tf.reduce_sum(qtarget_vec_ml * tf.cast(tf.equal(l_vec, idx_arr), tf.float32), axis = 2)
+        prob_mu = tf.reduce_sum(qtarget_vec_mu * tf.cast(tf.equal(u_vec, idx_arr), tf.float32), axis = 2)
+        m = prob_ml + prob_mu
         return m

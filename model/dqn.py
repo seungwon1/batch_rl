@@ -31,7 +31,7 @@ class DQN(object):
     
     # define huber loss
     def huber_loss(self, err, delta = 1.0):
-        loss = tf.reduce_mean(tf.where(tf.abs(err) < delta, tf.square(err) * 0.5, delta * (tf.abs(err) - 0.5 * delta)))
+        loss = tf.where(tf.abs(err) < delta, tf.square(err) * 0.5, delta * (tf.abs(err) - 0.5 * delta))
         return loss       
         
     # Define loss function
@@ -41,9 +41,9 @@ class DQN(object):
         batch_done = target_args['batch_done']
         tar_gd_action = target_args['gd_action_value']
         
-        max_q_target = batch_reward + self.gamma*(1-batch_done)*tar_gd_action # Compute Bellman update
-        error = tf.stop_gradient(max_q_target) - online_est_q # block gradient from backpropagating to the target variable
-        loss = self.huber_loss(error, delta = 1.0)
+        max_q_target = batch_reward + self.gamma*(1-batch_done)*tar_gd_action
+        error = tf.stop_gradient(max_q_target) - online_est_q
+        loss = tf.reduce_mean(self.huber_loss(error, delta = 1.0))
         return loss
     
     def dqn_optimizer(self, loss, optim_args):
@@ -51,6 +51,6 @@ class DQN(object):
         if self.opt=='rmsprop':
             optimizer = tf.train.RMSPropOptimizer(lr, epsilon = 0.01, decay = 0.95, momentum = 0.95) 
         elif self.opt=='adam':
-            optimizer = tf.train.AdamOptimizer(learning_rate= lr, epsilon=0.01/32) # self.lf ,# eps1e-4 for fast convergence, 0.01/32 for QR dqn
+            optimizer = tf.train.AdamOptimizer(learning_rate= lr, epsilon=0.01/32)
         train_step = optimizer.minimize(loss)
         return train_step

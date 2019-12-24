@@ -4,7 +4,7 @@ from .dqn import DQN
 
 class ENS_DQN(DQN):
     """Ensemble DQN(Agarwal et al 2019) implementation"""
-    def __init__(self, num_actions, lr = 0.00025, opt = 'adam', gamma = 0.99, arch = 'ENS_DQN', num_heads=200):
+    def __init__(self, num_actions, lr = 0.00005, opt = 'adam', gamma = 0.99, arch = 'ENS_DQN', num_heads=200):
         super(ENS_DQN, self).__init__(num_actions, lr, opt, gamma, arch)
         self.num_heads = num_heads
 
@@ -20,15 +20,15 @@ class ENS_DQN(DQN):
 
             with tf.variable_scope('fc'):
                 fc1 = tf.contrib.layers.fully_connected(conv3_flatten, 512)
-                out = tf.contrib.layers.fully_connected(fc1, self.num_actions * self.num_heads, activation_fn=None) # of shape (N,num_ac*num*heads)
+                out = tf.contrib.layers.fully_connected(fc1, self.num_actions * self.num_heads, activation_fn=None) 
         
-        out = tf.reshape(out, (tf.shape(out)[0], self.num_actions, self.num_heads)) # of shape (N, num_actions, num_heads)
-        greedy_idx = tf.argmax(tf.reduce_mean(out, axis = 2), axis = 1) # of shape (N, )
+        out = tf.reshape(out, (tf.shape(out)[0], self.num_actions, self.num_heads))
+        greedy_idx = tf.argmax(tf.reduce_mean(out, axis = 2), axis = 1)
             
-        action_mask = tf.reshape(tf.one_hot(action, self.num_actions, dtype='float32'), [-1, self.num_actions, 1]) # of shape (N, num_act,1)
+        action_mask = tf.reshape(tf.one_hot(act, self.num_actions, dtype='float32'), [-1, self.num_actions, 1])
         greedy_action_mask = tf.reshape(tf.one_hot(greedy_idx, self.num_actions, dtype='float32'), [-1, self.num_actions, 1])
 
-        est_q = tf.reduce_sum(out * action_mask, axis = 1) #of shape (N,num_act,num_heads) -> (N,num_heads) which is minimizer value(z) of Q(s,a)
+        est_q = tf.reduce_sum(out * action_mask, axis = 1)
         greedy_action = tf.reduce_sum(out * greedy_action_mask, axis = 1)
         return est_q, greedy_idx, greedy_action        
 
@@ -39,15 +39,8 @@ class ENS_DQN(DQN):
         batch_done = target_args['batch_done']
         tar_gd_action = target_args['gd_action_value']
         
-        max_q_target = tf.reshape(batch_reward, [-1, 1]) + self.gamma*tf.reshape((1-batch_done),[-1, 1])*tar_gd_action # Compute Bellman update
-        error = tf.stop_gradient(max_q_target) - online_est_q # block gradient from backpropagating to the target variable
-        
-        loss = tf.reduce_mean(tf.reduce_sum(self.huber_loss(error), axis = 1))
+        max_q_target = tf.reshape(batch_reward, [-1, 1]) + self.gamma*tf.reshape((1-batch_done),[-1, 1])*tar_gd_action
+        error = tf.stop_gradient(max_q_target) - online_est_q 
+        loss = tf.reduce_mean(tf.reduce_mean(self.huber_loss(error), axis = 0))
         return loss
-
-    # define optimizer
-    def dqn_optimizer(self, loss, optim_args):
-        lr = optim_args['lr']
-        optimizer = tf.train.AdamOptimizer(learning_rate= lr, epsilon=0.01/32) # self.lf ,# eps1e-4 for fast convergence, 0.01/32 for QR dqn
-        return optimizer.minimize(loss)
     

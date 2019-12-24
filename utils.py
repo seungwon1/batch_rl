@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import cv2
 import os
 import random
+import math
 from PIL import Image
 from atari_env import set_atari_env
 
@@ -26,18 +27,16 @@ def get_session(): # use with get_session() as sess: or sess = get_session()
     session = tf.Session(config=config)
     #session = InteractiveSession(config=config)
     return session
-    
-def preprocess(images): # input : raw image of shape (N, 210, 160, 3) from gym atari env
-    images = np.reshape(np.array(images), [1, 210, 160, 3]).astype(np.float32)
-    rgb2y = 0.299*images[...,0] + 0.587*images[...,1] + 0.114*images[...,2] # compute luminance from rgb
-    resized_input = cv2.resize(rgb2y.reshape(210, 160), (84, 110)) # resize with bilinear interpolation (default) cv2.resize(rgb2y.reshape(210, 160), (84, 84))  # interpolation=cv2.INTER_LINEAR
-    resized_input = resized_input[18:102, :].astype(np.uint8) # convert to 0-255 scale
-    return resized_input # output of shape (84,84)
 
 def linear_decay(step_count, start=1, end=0.1, frame=1000000):
     eps = start-(start-end)/(frame-1)*(step_count+1)
     if step_count > (frame-2):
         eps = end
+    return eps
+
+def exp_decay(step_count, start=1, end=0.01, frame=1000000):
+    lam = -np.log(end/start) / frame
+    eps = start*math.exp(-lam*step_count)
     return eps
 
 class ex_replay(object): # experience replay
@@ -57,9 +56,8 @@ class ex_replay(object): # experience replay
             self.memory_frame[step_count%self.memory_size, :, :] = s_t.reshape(84,84) #preprocess(s_t)
         else:
             self.memory_frame[(step_count+1)%self.memory_size, :, :] = next_s_t.reshape(84,84) #preprocess(next_s_t)
-            self.memory_a_r[step_count%self.memory_size, 0], self.memory_a_r[step_count%self.memory_size, 1] = a_t, r_t
-            self.memory_a_r[step_count%self.memory_size, 2] = done
-    
+            self.memory_a_r[step_count%self.memory_size, 0:3] = np.array([a_t, r_t, done])
+            
     def stack_frame(self, b_idx, step_count = None, batch = True):
         """
         Stack 4 most recent frames, return 0 array if there is no frame in the buffer or previous frame is not in the same game(episode)
@@ -86,6 +84,7 @@ class ex_replay(object): # experience replay
                     
                 if step_count < self.memory_size and step_count - (3-i) < 0: # return zero array if idx is negative value
                     out_frame[..., i] = np.zeros_like(out_frame[..., i])
+                    
         return out_frame
    
     def sample_ex(self, step_count, training_type = 'online'):

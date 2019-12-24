@@ -20,16 +20,16 @@ class QR_DQN(DQN):
 
             with tf.variable_scope('fc'):
                 fc1 = tf.contrib.layers.fully_connected(conv3_flatten, 512)
-                out = tf.contrib.layers.fully_connected(fc1, self.num_actions * self.num_heads, activation_fn=None) # of shape (N,num_ac*num*heads)
+                out = tf.contrib.layers.fully_connected(fc1, self.num_actions * self.num_heads, activation_fn=None)
         
-        out = tf.reshape(out, (tf.shape(out)[0], self.num_actions, self.num_heads)) # of shape (N, num_actions, num_heads)
-        greedy_idx = tf.argmax(tf.reduce_sum(out, axis = 2)/self.num_heads, axis = 1) # of shape (N, )
+        out = tf.reshape(out, (tf.shape(out)[0], self.num_actions, self.num_heads))
+        greedy_idx = tf.argmax(tf.reduce_sum(out, axis = 2)/self.num_heads, axis = 1)
         
-        action_mask = tf.reshape(tf.one_hot(act, self.num_actions, dtype='float32'), [-1, self.num_actions, 1]) # of shape (N, num_act,1)
+        action_mask = tf.reshape(tf.one_hot(act, self.num_actions, dtype='float32'), [-1, self.num_actions, 1]) 
         greedy_action_mask = tf.reshape(tf.one_hot(greedy_idx, self.num_actions, dtype='float32'), [-1, self.num_actions, 1])
 
-        est_q = tf.reduce_sum(out * action_mask, axis = 1) # of shape (N,num_act,num_heads) -> (N,num_heads) which is minimizer value(z) of Q(s,a)
-        est_q = tf.sort(est_q) # sort elements for calulating quantile regression loss
+        est_q = tf.reduce_sum(out * action_mask, axis = 1)
+        est_q = tf.sort(est_q)
             
         greedy_action = tf.reduce_sum(out * greedy_action_mask, axis = 1)
         greedy_action = tf.sort(greedy_action)    
@@ -37,22 +37,20 @@ class QR_DQN(DQN):
 
     # Define loss function
     def loss_fn(self, online_est_q, target_args, delta = 1.0): 
-        # Loss function is cross-entropy loss, project_prob is distribution after Bellman update
         batch_reward = target_args['batch_rew']
         batch_done = target_args['batch_done']
         tar_gd_action = target_args['gd_action_value']
         
-        update_zi = tf.reshape(batch_reward, [-1, 1]) + self.gamma*tf.reshape((1-batch_done),[-1, 1])*tar_gd_action # of shape (N,num_heads),T_theta
+        update_zi = tf.reshape(batch_reward, [-1, 1]) + self.gamma*tf.reshape((1-batch_done),[-1, 1])*tar_gd_action
         target_q = update_zi
         
-        # QR huber loss, target_val is value of supports after applying Bellman update
-        target_q = tf.expand_dims(target_q, axis = -2) # (N, 1, H)
-        online_est_q = tf.expand_dims(online_est_q, axis = -1) # (N, H, 1)
+        target_q = tf.expand_dims(target_q, axis = -2)
+        online_est_q = tf.expand_dims(online_est_q, axis = -1)
         
-        u = tf.stop_gradient(target_q) - online_est_q # (N, H, H)
+        u = tf.stop_gradient(target_q) - online_est_q
         indicator = tf.cast(u < 0.0, tf.float32)
         quentiles = ((np.arange(self.num_heads)+0.5)/float(self.num_heads)).reshape(1,self.num_heads, 1)
         
-        loss = tf.abs(quentiles - indicator) * self.huber_loss(u, delta) # (N, H, H) #  tf.stop_gradient(indicator)
+        loss = tf.abs(quentiles - indicator) * self.huber_loss(u, delta)
         loss = tf.reduce_mean(tf.reduce_sum(tf.reduce_mean(loss, axis = 2), axis = 1)) 
         return loss
