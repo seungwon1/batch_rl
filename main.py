@@ -60,18 +60,21 @@ def main():
         algo = model.DQN(num_actions = action_space, lr = FLAGS.lr, opt = FLAGS.opt, gamma = FLAGS.gamma, arch = FLAGS.arch)
         
     elif FLAGS.arch == 'C51':
-        algo = model.C51(num_actions = action_space, lr = FLAGS.lr) #, num_heads = FLAGS.num_heads, lr = FLAGS.lr, arch = FLAGS.arch) ... 
+        algo = model.C51(num_actions = action_space, lr = FLAGS.lr, num_heads = FLAGS.num_heads)
         
     elif FLAGS.arch == 'QR_DQN':
-        algo = model.QR_DQN(num_actions = action_space, lr = FLAGS.lr) 
+        algo = model.QR_DQN(num_actions = action_space, lr = FLAGS.lr, num_heads = FLAGS.num_heads) 
         
     elif FLAGS.arch == 'ENS_DQN':
-        algo = model.ENS_DQN(num_actions = action_space) 
+        algo = model.ENS_DQN(num_actions = action_space, lr = FLAGS.lr, num_heads = FLAGS.num_heads)  
         
     elif FLAGS.arch == 'REM_DQN':
-        algo = model.REM_DQN(num_actions = action_space) 
-        
-    dqnsolver = solver.DQNsolver(env, sess, algo, FLAGS)
+        algo = model.REM_DQN(num_actions = action_space, lr = FLAGS.lr, num_heads = FLAGS.num_heads)  
+    
+    if FLAGS.online:
+        dqnsolver = solver.DQNsolver(env, sess, algo, FLAGS)
+    else:
+        dqnsolver = solver.offlineDQNsolver(env, sess, algo, FLAGS)
     dqnsolver.train()
     
 if __name__ == "__main__":
