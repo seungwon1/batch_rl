@@ -1,0 +1,37 @@
+PongNoFrameskip-v4 
+
+# nature dqn
+python main.py --arch=DQN --eps=1.0 --final_eps=0.01 --max_frames=10000000 --opt=adam --lr=0.00005 --game=PongNoFrameskip-v4
+
+# C51
+python main.py --arch=C51 --eps=1.0 --final_eps=0.01 --max_frames=10000000  --opt=adam --lr=0.00005 --game=PongNoFrameskip-v4
+
+# QR_DQN
+python main.py --arch=QR_DQN --eps=1.0 --final_eps=0.01 --max_frames=10000000  --opt=adam --lr=0.00005 --num_heads=200 --game=PongNoFrameskip-v4
+
+# ENS_DQN
+python main.py --arch=ENS_DQN --eps=1.0 --final_eps=0.01 --max_frames=5000000  --opt=adam --lr=0.00025 --num_heads=200 --game=PongNoFrameskip-v4
+
+# REM_DQN
+python main.py --arch=REM_DQN --eps=1.0 --final_eps=0.01 --max_frames=10000000  --opt=adam --lr=0.00005 --num_heads=200  --game=PongNoFrameskip-v4
+
+---------------------------------------------------------------------------------------------------
+
+BreakoutNoFrameskip-v4
+
+# nature dqn
+python main.py --arch=DQN --eps=1.0 --final_eps=0.01 --max_frames=10000000  --opt=adam --lr=0.00025 --game=BreakoutNoFrameskip-v4
+
+# C51
+python main.py --arch=C51 --eps=1.0 --final_eps=0.01 --max_frames=10000000  --opt=adam --lr=0.00025 --num_heads=51 --game=BreakoutNoFrameskip-v4
+
+# QR_DQN
+python main.py --arch=QR_DQN --eps=1.0 --final_eps=0.01 --max_frames=10000000  --opt=adam --lr=0.00005 --num_heads=200 --game=BreakoutNoFrameskip-v4
+
+# ENS_DQN
+python main.py --arch=ENS_DQN --eps=1.0 --final_eps=0.01 --max_frames=10000000  --opt=adam --lr=0.00025 --num_heads=200 --game=BreakoutNoFrameskip-v4
+
+# REM_DQN
+python main.py --arch=REM_DQN --eps=1.0 --final_eps=0.01 --max_frames=10000000  --opt=adam --lr=0.0001 --num_heads=200 --game=BreakoutNoFrameskip-v4
+
+---------------------------------------------------------------------------------------------------
