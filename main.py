@@ -39,7 +39,7 @@ flags.DEFINE_string('exp', 'exp', 'log directory name')
 flags.DEFINE_bool('verbose', True, 'print loss during trainig')
 flags.DEFINE_bool('evaluate', False, 'evaluate trained agent ')
 flags.DEFINE_integer('print_every', 10, 'print interval')
-flags.DEFINE_integer('eval_every', 10, 'evaluation interval')
+flags.DEFINE_integer('eval_every', 100, 'evaluation interval')
 flags.DEFINE_integer('seed', 6550, 'seed number')
 
 def main():
@@ -47,7 +47,7 @@ def main():
     env = atari_env(FLAGS.seed, FLAGS.game)
     action_space = env.action_space.n
     
-    logdir = './results/' + FLAGS.game + FLAGS.arch + '_seed' + str(FLAGS.seed) + '_' + FLAGS.exp + '_' + time.strftime("%d-%m-%Y_%H-%M-%S")
+    logdir = './results/' + FLAGS.game + '_' + FLAGS.arch + '_seed' + str(FLAGS.seed) + '_' + FLAGS.exp + '_' + time.strftime("%d-%m-%Y_%H-%M-%S")
     flags.DEFINE_string('logdir', logdir + '/', 'logdir')
     if not os.path.exists(logdir):
         os.makedirs(logdir)

@@ -101,7 +101,7 @@ class FireResetEnv(gym.Wrapper):
         obs, _, _, _ = self.env.step(2)
         return obs    
 
-def set_atari_env(env, life_terminate = False):
+def set_atari_env(env, life_terminate = True):
     if life_terminate:
         env = life_termination(env)
     env = random_start_env(env)

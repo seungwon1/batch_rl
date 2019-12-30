@@ -150,11 +150,11 @@ class DQNsolver(object):
                         
                 # evaluate agent, log progress
                 if self.FLAGS.evaluate and episode_count % self.FLAGS.eval_every == 0:
-                    eval_rew, eval_std = eval_agent(self.env, self.sess, self.num_actions, self.on_gd_idx, self.on_state, self.FLAGS)
+                    eval_rew = eval_agent(self.env, self.sess, self.num_actions, self.on_gd_idx, self.on_state, self.FLAGS)
                     e_rew = self.sess.run(tf_eval_rew_summary, feed_dict={eval_avg_reward_log:eval_rew})
                     tf_writer.add_summary(e_rew, step_count)
                     stats.add(episode_count, loss_epi/(step_count-step_start), rew_epi, avg_reward,
-                              np.max(mean_reward), eps, step_count - step_start, step_count, eval_rew, eval_std)
+                              np.max(mean_reward), eps, step_count - step_start, step_count, eval_rew)
                 else:
                     stats.add(episode_count, loss_epi/(step_count-step_start), rew_epi,
                           avg_reward, np.max(mean_reward), eps, step_count - step_start, step_count)
