@@ -49,7 +49,7 @@ tensorboard --logdir=results/directory_name
 ```
 
 ## Results
-Below figures show online training curves of each DQN in PongNoFrameskip-v4 and BreakoutNoFrameskip-v4. Rewards are averaged over 100 previous episodes, and .
+Below figures show online training curves of each DQN in PongNoFrameskip-v4 and BreakoutNoFrameskip-v4. Rewards are averaged over 100 previous episodes.
 
 ![pong](figure/pong.png)
 ![breakout](figure/breakout_total.png)
