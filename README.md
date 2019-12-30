@@ -1,6 +1,6 @@
 # Batch_RL
 
-Tensorflow implementation for replicating the experiments described in the paper ["Striving for Simplicity in Off-policy Deep Reinforcement Learning"]( https://arxiv.org/abs/1907.04543). This repository aims to implement all variants of DQN used in the paper in pure tensorflow from scratch, whereas code provided by author used dopamine framework. The implementation contains:
+Tensorflow implementation for replicating the experiments described in ["Striving for Simplicity in Off-policy Deep Reinforcement Learning"]( https://arxiv.org/abs/1907.04543). This repository aims to implement all variants of DQN used in the paper from scratch in pure tensorflow, whereas code provided by author used dopamine framework. The implementation contains:
 
 [1] Classic DQN: [Human-level control through deep reinforcement learning](https://www.nature.com/articles/nature14236)  
 [2] C51: [A Distributional Perspective on Reinforcement Learning](https://arxiv.org/abs/1707.06887)  
@@ -13,22 +13,19 @@ Tensorflow implementation for replicating the experiments described in the paper
 
 ## Dependencies
 - Python 3.6 or greater
-- Tensorflow 1.13.1
-- Numpy 1.16.3
+- Tensorflow 1.14.0
+- Numpy 1.17.3
 - OpenAI Gym version 0.10.5
 - Matplotlib
 - OpenCV
 - Box2D 2.3.3
 - ffmpeg
 
-## Online Performance
-Below command line replicates experiments done in the paper: DQN [[1]](#batch_rl), C51 [[2]](#batch_rl), QR DQN [[3]](#batch_rl).
+## Train DQN
+
+Execute command like below
 ```
-python main.py --arch=DQN --eps=1.0 --final_eps=0.1 --max_frames=10000000 --opt=rmsprop --lr=0.00025 --game=PongNoFrameskip-v4
-
-python main.py --arch=C51 --eps=1.0 --final_eps=0.05 --max_frames=10000000  --opt=adam --lr=0.00025 --num_heads=51 --game=PongNoFrameskip-v4
-
-python main.py --arch=QR_DQN --eps=1.0 --final_eps=0.01 --max_frames=10000000  --opt=adam --lr=0.00005 --num_heads=200 --game=PongNoFrameskip-v4
+python main.py --arch=DQN --eps=1.0 --final_eps=0.01 --max_frames=10000000 --opt=adam --lr=0.00025 --game=PongNoFrameskip-v4 --train_start=50000 --target_reset=10000
 ```
 Args
 ```
@@ -40,41 +37,28 @@ Args
 -lr : learning rate of optimizer
 -num_heads : number of heads for C51, QR-DQN, Ensemble DQN and REM
 -game : Atari game env
+-train_start : warm-up period before training
+-target_reset : reset interval
+-online : perform online DQN if true, perform offline DQN which requires static dataset otherwise.
 ```
-- Other hyperparameters are the same as those in the paper (see main.py).
+For other hyper-parameters, see [here](https://github.com/seungwon1/batch_rl/blob/master/main.py).
 
-#### Results: online performance on PongNoFrameskip-v4 and BreakoutNoFrameskip-v4.
-<p align="center">
-<img src="https://github.com/seungwon1/batch_rl/blob/master/figure/n_dqn_p.png" width="250">
-<img src="https://github.com/seungwon1/batch_rl/blob/master/figure/c51_p.png" width="250">
-<img src="https://github.com/seungwon1/batch_rl/blob/master/figure/qr_dqn_p.png" width="250">
-</p>
+Metrics such as loss or evaluation reward can be easily visualized using tensorboard.
+```
+tensorboard --logdir=results/directory_name
+```
 
-<p align="center">
-<img src="https://github.com/seungwon1/batch_rl/blob/master/figure/n_dqn_l.png" width="250">
-<img src="https://github.com/seungwon1/batch_rl/blob/master/figure/c51_l.png" width="250">
-<img src="https://github.com/seungwon1/batch_rl/blob/master/figure/qr_dqn_l.png" width="250">
-</p>
+## Results
+Below figures show online training curves of each DQN in PongNoFrameskip-v4 and BreakoutNoFrameskip-v4. Rewards are averaged over 100 previous episodes, and .
 
-- Average reward of 100 previous episode on Pong, Left: DQN [[1]](#batch_rl), Center: C51, DQN [[2]](#batch_rl), Right: QR DQN, C51, DQN [[3]](#batch_rl)
-- Average Loss(per episode), Left: DQN [[1]](#batch_rl), Center: C51, DQN [[2]](#batch_rl), Right: QR DQN, C51, DQN [[3]](#batch_rl)
-- For each figure, the same hyperparameters are used for all DQNs.
-- Note that 1 frame in the x-axis includes 4 step counts.
-- Linearly decaying epsilon from 1 to 0.1(left), 0.05(center), 0.01(right) over the first 1M frames.
-- C51 is able to reach the best score but seems to learn optimal policy a bit slower than classic(Nature) DQN does, which is different from the results in [[2]](#batch_rl) and [[3]](#batch_rl). This is because Pong has relatively simple dynamics than other complex atari environments and the same hyperparameters as well as optimizer are used for each experiment. It can be mitigated by using different optimizer for each algorithm but the same value of hyperparameters or measuring performance on the more complex environment such as Breakout (See below).
+![pong](figure/pong.png)
+![breakout](figure/breakout_total.png)
 
-<p align="center">
-<img src="https://github.com/seungwon1/batch_rl/blob/master/figure/c51_p2.png" width="240">
-<img src="https://github.com/seungwon1/batch_rl/blob/master/figure/qr_dqn_p2.png" width="240">
-<img src="https://github.com/seungwon1/batch_rl/blob/master/figure/breakout.png" width="240">
-</p>
+Hyper-parameters used for each algorithm are [here](https://github.com/seungwon1/batch_rl/blob/master/default_hp).
 
-- Left: C51, DQN in environmental setup [[2]](#batch_rl), Center: C51, DQN in environmental setup [[3]](#batch_rl)
-- Right: Average reward of 100 previous episode on Breakout in environmental setup [[2]](#batch_rl).
-- Here RMS prop is used for DQN(left, center). For breakout(right), all hyperparameters as well as environmental setup are the same as [[2]](#batch_rl).
+## Hardware
 
-## Offline Performance
-- In progress
+Each algorithm is trained on a single RTX 2080 ti.
 
 ## Reference
 - [Deepmind's code](https://sites.google.com/a/deepmind.com/dqn/)  
